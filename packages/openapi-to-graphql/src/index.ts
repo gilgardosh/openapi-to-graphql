@@ -142,7 +142,6 @@ async function optionsTranslator<TSource, TContext, TArgs>(originOptions: Option
    * - fillEmptyResponses: boolean
    * - addLimitArgument: boolean
    * - idFormats?: string[]
-   * - selectQueryOrMutationField?: OasTitlePathMethodObject<GraphQLOperationType>
    * - genericPayloadArgName: boolean
    * - simpleNames: boolean
    * - simpleEnumValues: boolean
@@ -167,10 +166,10 @@ async function optionsTranslator<TSource, TContext, TArgs>(originOptions: Option
     fetch: originOptions.fetch,
     queryParams: originOptions.qs,
     source: oas,
+    selectQueryOrMutationField: originOptions.selectQueryOrMutationField,
   }
   /**
    * Not used config options:
-   * - selectQueryOrMutationField?: OpenAPILoaderSelectQueryOrMutationFieldConfig[];
    * - operations: JSONSchemaOperationConfig[],
    * - errorMessage?: string,
    * - logger?: Logger,

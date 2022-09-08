@@ -13,7 +13,7 @@ import { OpenAPIV3,
 } from 'openapi-types';
 import { getFieldNameFromPath } from './utils';
 import { OperationTypeNode } from 'graphql';
-import type { OpenAPILoaderSelectQueryOrMutationFieldConfig } from './types';
+import { GraphQLOperationType, OasTitlePathMethodObject, OpenAPILoaderSelectQueryOrMutationFieldConfig } from './types';
 import { Logger } from '@graphql-mesh/types';
 
 interface GetJSONSchemaOptionsFromOpenAPIOptionsParams {
@@ -24,7 +24,7 @@ interface GetJSONSchemaOptionsFromOpenAPIOptionsParams {
   schemaHeaders?: Record<string, string>;
   operationHeaders?: OperationHeadersConfiguration;
   queryParams?: Record<string, any>;
-  selectQueryOrMutationField?: OpenAPILoaderSelectQueryOrMutationFieldConfig[];
+  selectQueryOrMutationField?: OasTitlePathMethodObject<GraphQLOperationType>;
   logger?: Logger;
 }
 
@@ -37,14 +37,13 @@ export async function getJSONSchemaOptions(
     schemaHeaders,
     operationHeaders,
     queryParams = {},
-    selectQueryOrMutationField = [],
+    selectQueryOrMutationField = {},
     logger = new DefaultLogger('getJSONSchemaOptions'),
   }: GetJSONSchemaOptionsFromOpenAPIOptionsParams
 ) {
-  const fieldTypeMap: Record<string, 'query' | 'mutation'> = {};
-  for (const { fieldName, type } of selectQueryOrMutationField) {
-    fieldTypeMap[fieldName] = type;
-  }
+  const schemaName = source.info.title;
+  const localSelectQueryOrMutationField = selectQueryOrMutationField[schemaName] || {};
+  
   logger?.debug(`Fetching OpenAPI Document from ${source}`);
   let oasOrSwagger: OpenAPIV3.Document = source;
 
@@ -488,8 +487,8 @@ export async function getJSONSchemaOptions(
         }
       }
 
-      if (fieldTypeMap[operationConfig.field]) {
-        operationConfig.type = fieldTypeMap[operationConfig.field] as OperationTypeNode;
+      if (localSelectQueryOrMutationField && relativePath in localSelectQueryOrMutationField && method in localSelectQueryOrMutationField[relativePath]) {
+        operationConfig.type = (localSelectQueryOrMutationField[relativePath][method] === GraphQLOperationType.Query ? 'query' : 'mutation') as OperationTypeNode;
       }
     }
   }
