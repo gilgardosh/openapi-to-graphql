@@ -34,23 +34,16 @@
 import type { OpenAPIV3, OpenAPIV2 } from 'openapi-types';
 import { Headers } from '@whatwg-node/fetch';
 import type {
-  Args,
-  ConnectOptions,
-  FileUploadOptions,
   InternalOptions,
   OpenAPILoaderOptions,
   Operation,
   Options,
   PreprocessingData,
   Report,
-  RequestOptions,
-  SubscriptionContext,
 } from './types'
 import {GraphQLOperationType} from './types'
 import {
   GraphQLSchema,
-  GraphQLObjectType,
-  GraphQLOutputType,
   GraphQLFieldConfig,
 } from 'graphql'
 import { loadGraphQLSchemaFromJSONSchemas } from '@omnigraph/json-schema';
@@ -59,8 +52,6 @@ import { loadGraphQLSchemaFromJSONSchemas } from '@omnigraph/json-schema';
 import * as GraphQLTools from './graphql_tools'
 import { preprocessOas } from './preprocessor'
 import * as Oas3Tools from './oas_3_tools'
-import { createAndLoadViewer } from './auth_builder'
-import { GraphQLSchemaConfig } from 'graphql/type/schema'
 import { sortObject, handleWarning, MitigationTypes } from './utils'
 import crossFetch from 'cross-fetch'
 import debug from 'debug'
@@ -442,71 +433,6 @@ export function translateOpenAPIToGraphQL<TSource, TContext, TArgs>(
     }, 0)
 
   /**
-   * Organize authenticated Query, Mutation, and Subscriptions fields into
-   * viewer objects.
-   */
-  if (Object.keys(authQueryFields).length > 0) {
-    Object.assign(
-      queryFields,
-      createAndLoadViewer(
-        authQueryFields,
-        GraphQLOperationType.Query,
-        data,
-        fetch
-      )
-    )
-  }
-
-  if (Object.keys(authMutationFields).length > 0) {
-    Object.assign(
-      mutationFields,
-      createAndLoadViewer(
-        authMutationFields,
-        GraphQLOperationType.Mutation,
-        data,
-        fetch
-      )
-    )
-  }
-
-  if (Object.keys(authSubscriptionFields).length > 0) {
-    Object.assign(
-      subscriptionFields,
-      createAndLoadViewer(
-        authSubscriptionFields,
-        GraphQLOperationType.Subscription,
-        data,
-        fetch
-      )
-    )
-  }
-
-  // Build up the schema
-  const schemaConfig: GraphQLSchemaConfig = {
-    query:
-      Object.keys(queryFields).length > 0
-        ? new GraphQLObjectType({
-            name: 'Query',
-            fields: queryFields
-          })
-        : GraphQLTools.getEmptyObjectType('Query'), // A GraphQL schema must contain a Query object type
-    mutation:
-      Object.keys(mutationFields).length > 0
-        ? new GraphQLObjectType({
-            name: 'Mutation',
-            fields: mutationFields
-          })
-        : null,
-    subscription:
-      Object.keys(subscriptionFields).length > 0
-        ? new GraphQLObjectType({
-            name: 'Subscription',
-            fields: subscriptionFields
-          })
-        : null
-  }
-
-  /**
    * Fill in yet undefined object types to avoid GraphQLSchema from breaking.
    *
    * The reason: once creating the schema, the 'fields' thunks will resolve and
@@ -520,8 +446,6 @@ export function translateOpenAPIToGraphQL<TSource, TContext, TArgs>(
         )
     }
   })
-
-  const schema = new GraphQLSchema(schemaConfig)
 
   return { schema: meshSchema, report, data }
 }
@@ -548,11 +472,6 @@ function addQueryFields<TSource, TContext, TArgs>({
   const {
     operationIdFieldNames,
     singularNames,
-    baseUrl,
-    requestOptions,
-      fileUploadOptions,
-    connectOptions,
-    fetch
   } = options
 
   const saneOperationId = Oas3Tools.sanitize(
@@ -711,12 +630,7 @@ function addMutationFields<TSource, TContext, TArgs>({
   data: PreprocessingData<TSource, TContext, TArgs>
 }) {
   const {
-    singularNames,
-    baseUrl,
-    requestOptions,
-      fileUploadOptions,
-    connectOptions,
-    fetch
+    singularNames
   } = options
 
   const saneOperationId = Oas3Tools.sanitize(
@@ -834,7 +748,6 @@ function addSubscriptionFields<TSource, TContext, TArgs>({
   subscriptionFields,
   operationId,
   operation,
-  options,
   data
 }: {
   authSubscriptionFields: {
@@ -848,8 +761,6 @@ function addSubscriptionFields<TSource, TContext, TArgs>({
   options: InternalOptions<TSource, TContext, TArgs>
   data: PreprocessingData<TSource, TContext, TArgs>
 }) {
-  const { baseUrl, requestOptions, connectOptions, fetch, fileUploadOptions } = options
-
   const saneOperationId = Oas3Tools.sanitize(
     operationId,
     Oas3Tools.CaseStyle.camelCase
