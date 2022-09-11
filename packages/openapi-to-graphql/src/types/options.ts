@@ -4,10 +4,10 @@
 // License text available at https://opensource.org/licenses/MIT
 
 // Type imports:
-import { GraphQLOperationType, SubscriptionContext } from './graphql'
-import { GraphQLFieldResolver, GraphQLResolveInfo } from 'graphql'
 import crossFetch from 'cross-fetch'
 import FormData from 'form-data'
+import { GraphQLFieldResolver, GraphQLResolveInfo, OperationTypeNode } from 'graphql'
+import { SubscriptionContext } from './graphql'
 
 /**
  * Type definition of the options that users can pass to OpenAPI-to-GraphQL.
@@ -155,7 +155,7 @@ export type InternalOptions<TSource, TContext, TArgs> = {
    * The field is identifed first by the title of the OAS, then the path of the
    * operation, and lastly the method of the operation.
    */
-  selectQueryOrMutationField?: OasTitlePathMethodObject<GraphQLOperationType>
+  selectQueryOrMutationField?: OasTitlePathMethodObject<OperationTypeNode>
 
   /**
    * Sets argument name for the payload of a mutation to 'requestBody'

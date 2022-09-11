@@ -13,7 +13,7 @@ import { OpenAPIV3,
 } from 'openapi-types';
 import { getFieldNameFromPath } from './utils';
 import { OperationTypeNode } from 'graphql';
-import { GraphQLOperationType, OasTitlePathMethodObject, OpenAPILoaderSelectQueryOrMutationFieldConfig } from './types';
+import { OasTitlePathMethodObject, OpenAPILoaderSelectQueryOrMutationFieldConfig } from './types';
 import { Logger } from '@graphql-mesh/types';
 
 interface GetJSONSchemaOptionsFromOpenAPIOptionsParams {
@@ -24,7 +24,7 @@ interface GetJSONSchemaOptionsFromOpenAPIOptionsParams {
   schemaHeaders?: Record<string, string>;
   operationHeaders?: OperationHeadersConfiguration;
   queryParams?: Record<string, any>;
-  selectQueryOrMutationField?: OasTitlePathMethodObject<GraphQLOperationType>;
+  selectQueryOrMutationField?: OasTitlePathMethodObject<OperationTypeNode>;
   logger?: Logger;
 }
 
@@ -488,7 +488,7 @@ export async function getJSONSchemaOptions(
       }
 
       if (localSelectQueryOrMutationField && relativePath in localSelectQueryOrMutationField && method in localSelectQueryOrMutationField[relativePath]) {
-        operationConfig.type = (localSelectQueryOrMutationField[relativePath][method] === GraphQLOperationType.Query ? 'query' : 'mutation') as OperationTypeNode;
+        operationConfig.type = (localSelectQueryOrMutationField[relativePath][method] === OperationTypeNode.QUERY ? 'query' : 'mutation') as OperationTypeNode;
       }
     }
   }

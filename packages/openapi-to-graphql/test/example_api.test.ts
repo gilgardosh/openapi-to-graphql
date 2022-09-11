@@ -6,13 +6,12 @@
 'use strict'
 
 import 'json-bigint-patch';
-import { graphql, GraphQLInputObjectTypeConfig, GraphQLObjectTypeConfig, GraphQLSchema, parse, validate } from 'graphql'
+import { graphql, GraphQLInputObjectTypeConfig, GraphQLObjectTypeConfig, GraphQLSchema, OperationTypeNode, parse, validate } from 'graphql'
 import { afterAll, beforeAll, expect, test } from '@jest/globals'
 
 import * as openAPIToGraphQL from '../src/index'
 import { Options } from '../src/types/options'
 import { startServer, stopServer } from './example_api_server'
-import { GraphQLOperationType } from '../src/types/graphql'
 
 const oas = require('./fixtures/example_oas.json')
 const PORT = 3002
@@ -2014,7 +2013,7 @@ test('Option selectQueryOrMutationField', () => {
     selectQueryOrMutationField: {
       'Example API': {
         '/users/{username}': {
-          get: GraphQLOperationType.Mutation
+          get: OperationTypeNode.MUTATION
         }
       }
     }

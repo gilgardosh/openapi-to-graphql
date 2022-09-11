@@ -10,15 +10,14 @@
 
 import type { OpenAPIV3 } from 'openapi-types';
 
-import { GraphQLOperationType } from './graphql'
-
 import {
   GraphQLScalarType,
   GraphQLObjectType,
   GraphQLInputObjectType,
   GraphQLList,
   GraphQLEnumType,
-  GraphQLUnionType
+  GraphQLUnionType,
+  OperationTypeNode
 } from 'graphql'
 
 import { HTTP_METHODS } from '../oas_3_tools'
@@ -199,7 +198,7 @@ export type Operation = {
    * Type of root operation type, i.e. whether the generated field should be
    * added to the Query, Mutation, or Subscription root operation
    */
-  operationType: GraphQLOperationType
+  operationType: OperationTypeNode
 
   /**
    * The success HTTP code, 200-299, destined to become a GraphQL object type

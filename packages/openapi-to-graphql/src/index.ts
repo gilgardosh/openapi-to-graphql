@@ -41,10 +41,10 @@ import type {
   PreprocessingData,
   Report,
 } from './types'
-import {GraphQLOperationType} from './types'
 import {
   GraphQLSchema,
   GraphQLFieldConfig,
+  OperationTypeNode,
 } from 'graphql'
 import { loadGraphQLSchemaFromJSONSchemas } from '@omnigraph/json-schema';
 
@@ -359,7 +359,7 @@ export function translateOpenAPIToGraphQL<TSource, TContext, TArgs>(
   Object.entries(data.operations).forEach(([operationId, operation]) => {
     translationLog(`Process operation '${operation.operationString}'...`)
     // Check if the operation should be added as a Query or Mutation
-    if (operation.operationType === GraphQLOperationType.Query) {
+    if (operation.operationType === OperationTypeNode.QUERY) {
       addQueryFields({
         authQueryFields,
         queryFields,
@@ -368,7 +368,7 @@ export function translateOpenAPIToGraphQL<TSource, TContext, TArgs>(
         options,
         data
       })
-    } else if (operation.operationType === GraphQLOperationType.Mutation) {
+    } else if (operation.operationType === OperationTypeNode.MUTATION) {
       addMutationFields({
         authMutationFields,
         mutationFields,
@@ -940,4 +940,4 @@ function preliminaryChecks<TSource, TContext, TArgs>(
 }
 
 export { CaseStyle, sanitize } from './oas_3_tools'
-export { GraphQLOperationType } from './types/graphql'
+export { OperationTypeNode as GraphQLOperationType }

@@ -1,11 +1,11 @@
 import type { JSONSchemaLoaderOptions } from "@omnigraph/json-schema";
+import { OperationTypeNode } from "graphql";
 import type { OpenAPIV3 } from 'openapi-types';
-import type { GraphQLOperationType } from "./graphql";
 import type { OasTitlePathMethodObject } from "./options";
 
 export interface OpenAPILoaderOptions extends Partial<JSONSchemaLoaderOptions> {
     source: OpenAPIV3.Document;
-    selectQueryOrMutationField?: OasTitlePathMethodObject<GraphQLOperationType>;
+    selectQueryOrMutationField?: OasTitlePathMethodObject<OperationTypeNode>;
   }
 
 export interface OpenAPILoaderSelectQueryOrMutationFieldConfig {

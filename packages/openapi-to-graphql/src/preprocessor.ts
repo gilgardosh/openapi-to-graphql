@@ -4,6 +4,7 @@
 // License text available at https://opensource.org/licenses/MIT
 
 // Type imports:
+import { OperationTypeNode } from 'graphql';
 import type { OpenAPIV3 } from 'openapi-types';
 import type {
   DataDefinition,
@@ -19,7 +20,6 @@ import * as Oas3Tools from './oas_3_tools'
 import deepEqual from 'deep-equal'
 import debug from 'debug'
 import { handleWarning, getCommonPropertyNames, MitigationTypes } from './utils'
-import { GraphQLOperationType } from './types/graphql'
 import { methodToHttpMethod } from './oas_3_tools'
 
 const preprocessingLog = debug('preprocessing')
@@ -42,7 +42,7 @@ function processOperation<TSource, TContext, TArgs>(
   path: string,
   method: Oas3Tools.HTTP_METHODS,
   operationString: string,
-  operationType: GraphQLOperationType,
+  operationType: OperationTypeNode,
   operation: OpenAPIV3.OperationObject,
   pathItem: OpenAPIV3.PathItemObject,
   oas: OpenAPIV3.Document,
@@ -282,8 +282,8 @@ export function preprocessOas<TSource, TContext, TArgs>(
 
           let operationType =
             httpMethod === Oas3Tools.HTTP_METHODS.get
-              ? GraphQLOperationType.Query
-              : GraphQLOperationType.Mutation
+              ? OperationTypeNode.QUERY
+              : OperationTypeNode.MUTATION
 
           // Option selectQueryOrMutationField can override operation type
           if (
@@ -295,9 +295,9 @@ export function preprocessOas<TSource, TContext, TArgs>(
             operationType =
               options.selectQueryOrMutationField[oas.info.title][path][
                 httpMethod
-              ] === GraphQLOperationType.Mutation
-                ? GraphQLOperationType.Mutation
-                : GraphQLOperationType.Query
+              ] === OperationTypeNode.MUTATION
+                ? OperationTypeNode.MUTATION
+                : OperationTypeNode.QUERY
           }
 
           const operationData = processOperation(
@@ -418,7 +418,7 @@ export function preprocessOas<TSource, TContext, TArgs>(
                         callbackExpression,
                         callbackHttpMethod,
                         callbackOperationString,
-                        GraphQLOperationType.Subscription,
+                        OperationTypeNode.SUBSCRIPTION,
                         resolvedCallbackPathItem[callbackHttpMethod],
                         callbackPathItem,
                         oas,
