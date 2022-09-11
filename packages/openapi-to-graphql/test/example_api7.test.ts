@@ -170,13 +170,13 @@ test('Receive data from the subscription after creating a new instance', () => {
       })
 
     setTimeout(() => {
-      graphql(createdSchema, query2, null, null, {
+      graphql({schema: createdSchema, source: query2, rootValue: null, contextValue: null, variableValues: {
         deviceInput: {
           name: `${deviceName}`,
           userName: `${userName}`,
           status: false
         }
-      })
+      }})
         .then((res) => {
           if (!res.data) {
             reject(new Error('Failed mutation'))

@@ -18,7 +18,7 @@ const PORT = 3002
 // Update PORT for this test case:
 oas.servers[0].variables.port.default = String(PORT)
 
-let createdSchema: GraphQLSchema
+let createdSchema;
 
 // Set up the schema first and run example API server
 beforeAll(() => {

@@ -59,7 +59,7 @@ test('Registers the graphql-upload Upload scalar type', async () => {
     }
   }`
 
-  const result = await graphql(createdSchema, query)
+  const result = await graphql({schema: createdSchema, source: query})
   expect(result).toEqual({
     data: {
       __type: {
@@ -92,7 +92,7 @@ test('Introspection for mutations returns a mutation matching the custom field s
     }
   }`
 
-  const result = await graphql(createdSchema, query)
+  const result = await graphql({schema: createdSchema, source: query})
 
   expect(result).toEqual({
     data: {
@@ -119,14 +119,16 @@ test('Upload completes without any error', async () => {
   const graphqlServer = createServer(async (req, res) => {
     try {
       const operation = await processRequest(req, res) as GraphQLOperation
-      const result = await graphql(createdSchema, operation.query, null, null, operation.variables)
+      const result = await graphql({schema: createdSchema, source: operation.query, rootValue: null, contextValue: null, variableValues: operation.variables as {
+        readonly [variable: string]: unknown;
+    } | undefined})
       res.end(JSON.stringify(result))
     } catch (e) {
       console.log(e)
     }
   })
 
-  const { port: graphqlServerPort, close: closeGraphQLServer } = await new Promise((resolve, reject) => {
+  const { port: graphqlServerPort, close: closeGraphQLServer } = await new Promise<{port: any, close: any}>((resolve, reject) => {
     graphqlServer.listen(function (err) {
       if (err) {
         return reject(err)

@@ -12,9 +12,9 @@ const {
   GraphQLString,
   graphql
 } = require('graphql')
+import type { OpenAPIV3 } from 'openapi-types';
 
 import * as Oas3Tools from '../src/oas_3_tools'
-import { PathItemObject } from '../src/types/oas3'
 
 test('Applying sanitize multiple times does not change outcome', () => {
   const str = 'this Super*annoying-string()'
@@ -202,17 +202,9 @@ test('Handle encoded JSON pointer references', () => {
     Oas3Tools.resolveRef('#/paths/~1users~1%7bid%7d/description', oas)
   ).toBe('one')
 
-  function getPathItemObject(description): PathItemObject {
+  function getPathItemObject(description): OpenAPIV3.PathItemObject {
     return {
       description,
-      get: {},
-      put: {},
-      post: {},
-      delete: {},
-      options: {},
-      head: {},
-      patch: {},
-      trace: {}
     }
   }
 })
