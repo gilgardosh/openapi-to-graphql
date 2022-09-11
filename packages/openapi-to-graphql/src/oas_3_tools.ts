@@ -279,7 +279,7 @@ export function resolveAllOf<TSource, TContext, TArgs>(
   /**
    * Copy the schema
    */
-  const collapsedSchema: OpenAPIV3.SchemaObject = cloneDeep(schema);
+  const collapsedSchema = cloneDeep(schema  as OpenAPIV3.SchemaObject);
 
   // Resolve allOf
   if (Array.isArray(collapsedSchema.allOf)) {
