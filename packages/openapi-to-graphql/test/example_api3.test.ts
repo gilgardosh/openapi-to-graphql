@@ -9,7 +9,7 @@ import { graphql, GraphQLSchema, parse, validate } from 'graphql'
 import { afterAll, beforeAll, expect, test } from '@jest/globals'
 
 import * as openAPIToGraphQL from '../src/index'
-import { Options } from '../src/types/options'
+import { Options } from '../src/types'
 
 const api = require('./example_api_server')
 const api2 = require('./example_api3_server')

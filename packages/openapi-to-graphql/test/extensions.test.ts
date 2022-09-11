@@ -12,13 +12,13 @@ import {
   GraphQLObjectType,
   GraphQLSchema
 } from 'graphql'
+import type { OpenAPIV3 } from 'openapi-types';
 
 import * as openAPIToGraphQL from '../src/index'
-import { Oas3 } from '../src/types/oas3'
 
 describe('GraphQL Extensions', () => {
   describe('Schema output', () => {
-    let oas: Oas3
+    let oas: OpenAPIV3.Document
     let createdSchema: GraphQLSchema
 
     beforeAll(async () => {

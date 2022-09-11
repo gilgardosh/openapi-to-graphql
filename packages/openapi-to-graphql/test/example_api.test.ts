@@ -10,7 +10,7 @@ import { graphql, GraphQLInputObjectTypeConfig, GraphQLObjectTypeConfig, GraphQL
 import { afterAll, beforeAll, expect, test } from '@jest/globals'
 
 import * as openAPIToGraphQL from '../src/index'
-import { Options } from '../src/types/options'
+import { Options } from '../src/types'
 import { startServer, stopServer } from './example_api_server'
 
 const oas = require('./fixtures/example_oas.json')

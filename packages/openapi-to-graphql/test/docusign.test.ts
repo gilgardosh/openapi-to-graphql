@@ -9,7 +9,7 @@ import { graphql } from 'graphql'
 import { afterAll, beforeAll, expect, test } from '@jest/globals'
 
 import * as openAPIToGraphQL from '../src/index'
-import { Options } from '../src/types/options'
+import { Options } from '../src/types'
 
 const oas = require('./fixtures/docusign.json')
 

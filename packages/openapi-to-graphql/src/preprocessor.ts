@@ -663,7 +663,7 @@ function getProcessedSecuritySchemes<TSource, TContext, TArgs>(
  * Method to either create a new or reuse an existing, centrally stored data
  * definition.
  */
-export function createDataDef<TSource, TContext, TArgs>(
+function createDataDef<TSource, TContext, TArgs>(
   names: Oas3Tools.SchemaNames,
   schemaOrRef: OpenAPIV3.SchemaObject | OpenAPIV3.ReferenceObject,
   isInputObjectType: boolean,

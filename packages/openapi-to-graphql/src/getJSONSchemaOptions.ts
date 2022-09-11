@@ -13,7 +13,7 @@ import { OpenAPIV3,
 } from 'openapi-types';
 import { getFieldNameFromPath } from './utils';
 import { OperationTypeNode } from 'graphql';
-import { OasTitlePathMethodObject, OpenAPILoaderSelectQueryOrMutationFieldConfig } from './types';
+import { OasTitlePathMethodObject } from './types';
 import { Logger } from '@graphql-mesh/types';
 
 interface GetJSONSchemaOptionsFromOpenAPIOptionsParams {
