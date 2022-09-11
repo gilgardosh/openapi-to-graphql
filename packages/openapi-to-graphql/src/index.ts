@@ -56,11 +56,6 @@ import {
 import { loadGraphQLSchemaFromJSONSchemas } from '@omnigraph/json-schema';
 
 // Imports:
-import {
-  getResolver,
-  getSubscribe,
-  getPublishResolver
-} from './resolver_builder'
 import * as GraphQLTools from './graphql_tools'
 import { preprocessOas } from './preprocessor'
 import * as Oas3Tools from './oas_3_tools'
@@ -182,7 +177,7 @@ async function optionsTranslator<TSource, TContext, TArgs>(originOptions: Option
   if (originOptions.headers) {
     if (originOptions.headers instanceof Function) {
       // Differences between headers function here and over MESH prevents it from being supported currently
-      console.error('headers as a function is not supported');
+      translationLog('headers as a function is not supported');
     } else {
       options.operationHeaders = {};
       if (Array.isArray(originOptions.headers)) {
@@ -206,9 +201,13 @@ async function optionsTranslator<TSource, TContext, TArgs>(originOptions: Option
  * Creates a GraphQL interface from the given OpenAPI Specification (2 or 3).
  */
 export async function createGraphQLSchema<TSource, TContext, TArgs>(
-  spec: OpenAPIV3.Document | OpenAPIV2.Document,
+  spec: OpenAPIV3.Document | OpenAPIV2.Document | (OpenAPIV3.Document | OpenAPIV2.Document)[],
   options?: Options<TSource, TContext, TArgs>
 ): Promise<Result<TSource, TContext, TArgs>> {
+  if (Array.isArray(spec)) {
+    translationLog('Multiple source documents are not supported. Handling only the first one');
+    spec = spec[0];
+  }
   const internalOptions = {
     ...DEFAULT_OPTIONS,
     ...options
