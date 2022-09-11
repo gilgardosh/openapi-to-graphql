@@ -64,20 +64,20 @@ test('The option operationIdFieldNames should allow both operations to be presen
 
 test('Querying the two operations', () => {
   const query = `query {
-    getUser {
+    user {
       name
     }
-    user {
+    User {
       name
     }
   }`
   return graphql({schema: createdSchema, source: query}).then((result) => {
     expect(result).toEqual({
       data: {
-        getUser: {
+        user: {
           name: 'Arlene L McMahon'
         },
-        user: {
+        User: {
           name: 'William B Ropp'
         }
       }

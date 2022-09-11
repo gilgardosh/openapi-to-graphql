@@ -15,14 +15,18 @@ const oas = require('./fixtures/cloudfunction.json')
 let createdSchema: GraphQLSchema
 
 beforeAll(async () => {
-  const { schema } = await openAPIToGraphQL.createGraphQLSchema(oas)
+  const { schema } = await openAPIToGraphQL.createGraphQLSchema(oas, {
+    headers: {
+      authorization: 'Basic {args.usernameAndPassword|base64}',
+    }
+  })
   createdSchema = schema
 })
 
 test('Get response', async () => {
   const query = `mutation {
-    mutationViewerBasicAuth (username: "test" password: "data") {
-      postTestAction2 (payloadInput: {age: 27}) {
+    post_test_action_2 (input: {age: 27}, usernameAndPassword: "test:data") {
+      ... on Response {
         payload
         age
       }
