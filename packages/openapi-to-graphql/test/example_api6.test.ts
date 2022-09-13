@@ -101,7 +101,7 @@ test('Option requestOptions should work with links', () => {
 // Simple scalar fields on the request body
 test('Simple request body using application/x-www-form-urlencoded', () => {
   const query = `mutation {
-    postFormUrlEncoded (petInput: {
+    post_formUrlEncoded (input: {
       name: "Mittens",
       status: "healthy",
       weight: 6
@@ -114,7 +114,7 @@ test('Simple request body using application/x-www-form-urlencoded', () => {
 
   return graphql({schema: createdSchema, source: query}).then((result) => {
     expect(result.data).toEqual({
-      postFormUrlEncoded: {
+      post_formUrlEncoded: {
         name: 'Mittens',
         status: 'healthy',
         weight: 6
@@ -130,18 +130,18 @@ test('Simple request body using application/x-www-form-urlencoded', () => {
  */
 test('Request body using application/x-www-form-urlencoded and desanitization of field name', () => {
   const query = `mutation {
-    postFormUrlEncoded (petInput: {
-      previousOwner: "Martin",
+    post_formUrlEncoded (input: {
+      previous_owner: "Martin",
       status: "healthy"
     }) {
-      previousOwner
+      previous_owner
     }
   }`
 
   return graphql({schema: createdSchema, source: query}).then((result) => {
     expect(result.data).toEqual({
-      postFormUrlEncoded: {
-        previousOwner: 'Martin'
+      post_formUrlEncoded: {
+        previous_owner: 'Martin'
       }
     })
   })
@@ -154,7 +154,7 @@ test('Request body using application/x-www-form-urlencoded and desanitization of
  */
 test('Request body using application/x-www-form-urlencoded containing object', () => {
   const query = `mutation {
-    postFormUrlEncoded (petInput: {
+    post_formUrlEncoded (input: {
       history: {
         data: "Friendly"
       }
@@ -168,7 +168,7 @@ test('Request body using application/x-www-form-urlencoded containing object', (
 
   return graphql({schema: createdSchema, source: query}).then((result) => {
     expect(result.data).toEqual({
-      postFormUrlEncoded: {
+      post_formUrlEncoded: {
         history: {
           data: 'Friendly'
         }
@@ -179,7 +179,7 @@ test('Request body using application/x-www-form-urlencoded containing object', (
 
 test('Request body using application/x-www-form-urlencoded containing object with no properties', () => {
   const query = `mutation {
-    postFormUrlEncoded (petInput: {
+    post_formUrlEncoded (input: {
       history2: {
         data: "Friendly"
       }
@@ -191,7 +191,7 @@ test('Request body using application/x-www-form-urlencoded containing object wit
 
   return graphql({schema: createdSchema, source: query}).then((result) => {
     expect(result.data).toEqual({
-      postFormUrlEncoded: {
+      post_formUrlEncoded: {
         history2: {
           data: 'Friendly'
         }
@@ -201,41 +201,41 @@ test('Request body using application/x-www-form-urlencoded containing object wit
 })
 
 /**
- * GET /cars/{id} should create a 'car' field
+ * '/cars/{id}' should create a 'cars_by_id' field
  *
  * Also the path parameter just contains the term 'id'
  */
 test('inferResourceNameFromPath() field with simple plural form', () => {
   const query = `{
-    car (id: "Super Speed")
+    cars_by_id (id: "Super Speed")
   }`
 
   return graphql({schema: createdSchema, source: query}).then((result) => {
     expect(result.data).toEqual({
-      car: 'Car ID: Super Speed'
+      cars_by_id: 'Car ID: Super Speed'
     })
   })
 })
 
 /**
- * GET /cacti/{cactusId} should create an 'cactus' field
+ * '/cacti/{cactusId}' should create an 'cacti_by_cactusId' field
  *
  * Also the path parameter is the combination of the singular form and 'id'
  */
 test('inferResourceNameFromPath() field with irregular plural form', () => {
   const query = `{
-    cactus (cactusId: "Spikey")
+    cacti_by_cactusId (cactusId: "Spikey")
   }`
 
   return graphql({schema: createdSchema, source: query}).then((result) => {
     expect(result.data).toEqual({
-      cactus: 'Cactus ID: Spikey'
+      cacti_by_cactusId: 'Cactus ID: Spikey'
     })
   })
 })
 
 /**
- * GET /eateries/{eatery}/breads/{breadName}/dishes/{dishKey} should create an
+ * '/eateries/{eatery}/breads/{breadName}/dishes/{dishKey}/ should create an
  * 'eateryBreadDish' field
  *
  * The path parameters are the singular form, some combination with the term
@@ -243,12 +243,12 @@ test('inferResourceNameFromPath() field with irregular plural form', () => {
  */
 test('inferResourceNameFromPath() field with long path', () => {
   const query = `{
-    eateryBreadDish(eatery: "Mike's", breadName: "challah", dishKey: "bread pudding")
+    eateries_by_eatery_breads_by_breadName_dishes_by_dishKey(eatery: "Mike's", breadName: "challah", dishKey: "bread pudding")
   }`
 
   return graphql({schema: createdSchema, source: query}).then((result) => {
     expect(result.data).toEqual({
-      eateryBreadDish: "Parameters combined: Mike's challah bread pudding"
+      eateries_by_eatery_breads_by_breadName_dishes_by_dishKey: "Parameters combined: Mike's challah bread pudding"
     })
   })
 })
@@ -281,8 +281,8 @@ test('Nested reference in parameter schema', () => {
  * 'POST inputUnion' has a request body that contains a oneOf. The request body
  * will be converted into an input object type while the oneOf will be turned
  * into a union type. However, according to the spec, input object types cannot
- * be composed of unions. As a fall back, this pattern should default to the
- * arbitrary JSON type instead.
+ * be composed of unions. We create an input type with `@oneOf` directive which
+ * annotates that type as an input union.
  */
 test('Input object types composed of union types should default to arbitrary JSON type', () => {
   const query = `{
@@ -302,17 +302,29 @@ test('Input object types composed of union types should default to arbitrary JSO
   return graphql({schema: createdSchema, source: query}).then((result) => {
     expect(
       (result.data['__type'] as any).fields.find(
-        (field) => field.name === 'postInputUnion'
+        (field) => field.name === 'post_inputUnion'
       )
     ).toEqual({
-      name: 'postInputUnion',
+      name: 'post_inputUnion',
       args: [
         {
-          name: 'inputUnionInput',
+          name: 'port',
           type: {
-            name: 'JSON'
-          }
-        }
+            name: 'String'
+          },
+        },
+        {
+          name: "basePath",
+          type: {
+            name: "String",
+          },
+        },
+        {
+          name: "input",
+          type: {
+            name: "post_inputUnion_request_Input",
+          },
+        },
       ]
     })
   })
@@ -336,7 +348,7 @@ test('Get operation should not receive Content-Type', () => {
 /**
  * GET /noResponseSchema does not have a response schema
  */
-test('Handle no response schema', () => {
+test('Handle no response schema1', () => {
   const query = `{
     noResponseSchema
   }`
@@ -353,7 +365,7 @@ test('Handle no response schema', () => {
  * GET /testLinkWithNonStringParam has a link object that has a non-string 
  * parameter
  */
- test('Handle no response schema', () => {
+ test('Handle no response schema2', () => {
   const query = `{
     testLinkWithNonStringParam {
       hello
@@ -365,7 +377,7 @@ test('Handle no response schema', () => {
     expect(result.data).toEqual({
       testLinkWithNonStringParam: {
         hello: "world",
-        return5: "5"
+        return5: 5
       }
     })
   })
@@ -375,7 +387,7 @@ test('Handle no response schema', () => {
  * GET /testLinkwithNestedParam has a link object that has a nested 
  * parameter
  */
- test('Handle no response schema', () => {
+ test('Handle no response schema3', () => {
   const query = `{
     testLinkwithNestedParam{
       nesting1 {
@@ -391,7 +403,7 @@ test('Handle no response schema', () => {
         nesting1: {
           nesting2: 5
         },
-        returnNestedNumber: "5"
+        returnNestedNumber: 5
       }
     })
   })
