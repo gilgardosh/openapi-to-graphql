@@ -234,91 +234,10 @@ export async function createGraphQLSchema<TSource, TContext, TArgs>(
  */
 export function translateOpenAPIToGraphQL<TSource, TContext, TArgs>(
   oass: OpenAPIV3.Document[],
-  {
-    strict,
-    report,
-
-    // Schema options
-    operationIdFieldNames,
-    fillEmptyResponses,
-    addLimitArgument,
-    idFormats,
-    selectQueryOrMutationField,
-    genericPayloadArgName,
-    simpleNames,
-    simpleEnumValues,
-    singularNames,
-    createSubscriptionsFromCallbacks,
-
-    // Resolver options
-    headers,
-    qs,
-    requestOptions,
-    fileUploadOptions,
-    connectOptions,
-    baseUrl,
-    customResolvers,
-    customSubscriptionResolvers,
-
-    // Authentication options
-    viewer,
-    tokenJSONpath,
-    sendOAuthTokenInQuery,
-
-    // Validation options
-    oasValidatorOptions,
-    swagger2OpenAPIOptions,
-
-    // Logging options
-    provideErrorExtensions,
-    equivalentToMessages,
-
-    fetch
-  }: InternalOptions<TSource, TContext, TArgs>,
+  options: InternalOptions<TSource, TContext, TArgs>,
   meshSchema: GraphQLSchema
 ): Result<TSource, TContext, TArgs> {
-  const options = {
-    strict,
-    report,
-
-    // Schema options
-    operationIdFieldNames,
-    fillEmptyResponses,
-    addLimitArgument,
-    idFormats,
-    selectQueryOrMutationField,
-    genericPayloadArgName,
-    simpleNames,
-    simpleEnumValues,
-    singularNames,
-    createSubscriptionsFromCallbacks,
-
-    // Resolver options
-    headers,
-    qs,
-    requestOptions,
-    fileUploadOptions,
-    connectOptions,
-    baseUrl,
-    customResolvers,
-    customSubscriptionResolvers,
-
-    // Authentication options
-    viewer,
-    tokenJSONpath,
-    sendOAuthTokenInQuery,
-
-    // Validation options
-    oasValidatorOptions,
-    swagger2OpenAPIOptions,
-
-    // Logging options
-    provideErrorExtensions,
-    equivalentToMessages,
-
-    fetch
-  }
-  // translationLog(`Options: ${JSON.stringify(options)}`)
+  const { report } = options;
 
   /**
    * Extract information from the OASs and put it inside a data structure that
