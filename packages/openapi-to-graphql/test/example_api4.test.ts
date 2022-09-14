@@ -5,12 +5,18 @@
 
 'use strict'
 
+import { beforeAll, expect, test } from '@jest/globals'
+import { readFileSync } from 'fs'
 import { graphql, GraphQLSchema } from 'graphql'
-import { afterAll, beforeAll, expect, test } from '@jest/globals'
+import { join } from 'path'
 
 import * as openAPIToGraphQL from '../src/index'
 
-const oas = require('./fixtures/example_oas4.json')
+function getOas() {
+  const oasStr = readFileSync(join(__dirname, './fixtures/example_oas4.json'), 'utf8');
+  const oas = JSON.parse(oasStr);
+  return oas;
+};
 
 let createdSchema: GraphQLSchema
 
@@ -19,7 +25,7 @@ let createdSchema: GraphQLSchema
 // Set up the schema
 beforeAll(() => {
   return openAPIToGraphQL
-    .createGraphQLSchema(oas)
+    .createGraphQLSchema(getOas())
     .then(({ schema, report }) => {
       createdSchema = schema
     })

@@ -5,25 +5,32 @@
 
 'use strict'
 
-import { graphql, GraphQLObjectType, GraphQLSchema, parse, validate } from 'graphql'
-import { afterAll, beforeAll, expect, test } from '@jest/globals'
+import { beforeAll, expect, test } from '@jest/globals'
+import { readFileSync } from 'fs'
+import { GraphQLObjectType, GraphQLSchema, parse, validate } from 'graphql'
+import { join } from 'path'
 
 const openAPIToGraphQL = require('../src/index')
 const Oas3Tools = require('../src/oas_3_tools')
 
 // Set up the schema first
-const oas = require('./fixtures/government_social_work.json')
+function getOas() {
+  const oasStr = readFileSync(join(__dirname, './fixtures/government_social_work.json'), 'utf8');
+  const oas = JSON.parse(oasStr);
+  return oas;
+};
 
 let createdSchema: GraphQLSchema
 beforeAll(() => {
   return openAPIToGraphQL
-    .createGraphQLSchema(oas)
+    .createGraphQLSchema(getOas())
     .then(({ schema, report }) => {
       createdSchema = schema
     })
 })
 
 test('All query endpoints present', () => {
+  const oas = getOas();
   let oasGetCount = 0
   for (let path in oas.paths) {
     for (let method in oas.paths[path]) {
@@ -35,6 +42,7 @@ test('All query endpoints present', () => {
 })
 
 test('All mutation endpoints present', () => {
+  const oas = getOas();
   let oasMutCount = 0
   for (let path in oas.paths) {
     for (let method in oas.paths[path]) {
@@ -48,16 +56,18 @@ test('All mutation endpoints present', () => {
 
 test('Get resource', () => {
   const query = `{
-    assessmentTypes (
-      contentType: ""
-      acceptLanguage: ""
-      userAgent:""
-      apiVersion:"1.1.0"
+    getAssessmentTypes (
+      Content_Type: ""
+      Accept_Language: ""
+      User_Agent:""
+      Api_Version:"1.1.0"
       offset: "40"
       limit: "test"
     ) {
-      data {
-        assessmentTypeId
+      ... on getAssessmentTypes_200_response {
+        data {
+          assessmentTypeId
+        }
       }
     }
   }`

@@ -5,16 +5,22 @@
 
 'use strict'
 
-import { graphql, GraphQLSchema } from 'graphql'
 import { afterAll, beforeAll, expect, test } from '@jest/globals'
+import { readFileSync } from 'fs'
+import { graphql, GraphQLSchema } from 'graphql'
+import { join } from 'path'
 
 import * as openAPIToGraphQL from '../src/index'
 import { startServer, stopServer } from './example_api5_server'
 
-const oas = require('./fixtures/example_oas5.json')
 const PORT = 3007
-// Update PORT for this test case:
-oas.servers[0].variables.port.default = String(PORT)
+function getOas() {
+  const oasStr = readFileSync(join(__dirname, './fixtures/example_oas5.json'), 'utf8');
+  const oas = JSON.parse(oasStr);
+  // update PORT for this test case:
+  oas.servers[0].variables.port.default = String(PORT);
+  return oas;
+};
 
 // Testing the new naming convention
 
@@ -24,7 +30,7 @@ let createdSchema: GraphQLSchema
 beforeAll(() => {
   return Promise.all([
     openAPIToGraphQL
-      .createGraphQLSchema(oas, {
+      .createGraphQLSchema(getOas(), {
         simpleNames: true
       })
       .then(({ schema, report }) => {

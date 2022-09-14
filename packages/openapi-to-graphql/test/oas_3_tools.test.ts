@@ -5,13 +5,13 @@
 
 'use strict'
 
-import { afterAll, beforeAll, expect, test } from '@jest/globals'
-const {
+import { expect, test } from '@jest/globals'
+import {
   GraphQLSchema,
   GraphQLObjectType,
   GraphQLString,
   graphql
-} = require('graphql')
+} from 'graphql';
 import type { OpenAPIV3 } from 'openapi-types';
 
 import * as Oas3Tools from '../src/oas_3_tools'
@@ -145,7 +145,6 @@ test('Properly treat null values during sanitization', () => {
       name: 'Query',
       fields: {
         User: {
-          name: 'name',
           type: new GraphQLObjectType({
             name: 'user',
             fields: {
@@ -171,7 +170,7 @@ test('Properly treat null values during sanitization', () => {
     }
   }`
 
-  graphql(schema, query).then((result) => {
+  graphql({schema, source: query}).then((result) => {
     expect(result).toEqual({
       data: {
         User: {

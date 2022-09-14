@@ -5,23 +5,30 @@
 
 'use strict'
 
-import { graphql, GraphQLSchema } from 'graphql'
 import { afterAll, beforeAll, expect, test } from '@jest/globals'
+import { readFileSync } from 'fs'
+import { graphql, GraphQLSchema } from 'graphql'
+import { join } from 'path'
 
 import * as openAPIToGraphQL from '../src/index'
 import { startServer, stopServer } from './example_api_server'
 
-const oas = require('./fixtures/example_oas.json')
 const PORT = 3003
-// update PORT for this test case:
-oas.servers[0].variables.port.default = String(PORT)
+
+function getOas() {
+  const oasStr = readFileSync(join(__dirname, './fixtures/example_oas.json'), 'utf8');
+  const oas = JSON.parse(oasStr);
+  // update PORT for this test case:
+  oas.servers[0].variables.port.default = String(PORT);
+  return oas;
+};
 
 let createdSchema: GraphQLSchema
 
 // Set up the schema first and run example API server
 beforeAll(() => {
   return Promise.all([
-    openAPIToGraphQL.createGraphQLSchema(oas).then(({ schema }) => {
+    openAPIToGraphQL.createGraphQLSchema(getOas()).then(({ schema }) => {
       createdSchema = schema
     }),
     startServer(PORT)
@@ -500,7 +507,7 @@ test('should get patent using basic auth', async () => {
   `;
 
 return openAPIToGraphQL
-.createGraphQLSchema(oas, {
+.createGraphQLSchema(getOas(), {
   headers: {
     authorization: 'Basic {args.usernameAndPassword|base64}',
   }
@@ -529,7 +536,7 @@ test('Get patent using API key in the header', async () => {
   `;
 
 return openAPIToGraphQL
-.createGraphQLSchema(oas, {
+.createGraphQLSchema(getOas(), {
   headers: {
     access_token: '{args.apiKey}',
   }
@@ -558,7 +565,7 @@ test('Get patent using API key in the cookie', async () => {
   `;
 
 return openAPIToGraphQL
-.createGraphQLSchema(oas, {
+.createGraphQLSchema(getOas(), {
   headers: {
     cookie: 'access_token={args.apiKey}',
   }
@@ -587,7 +594,7 @@ test('Get patent using API key in the query string', async () => {
   `;
 
 return openAPIToGraphQL
-.createGraphQLSchema(oas, {
+.createGraphQLSchema(getOas(), {
   headers: {
     access_token: '{args.apiKey}',
   }

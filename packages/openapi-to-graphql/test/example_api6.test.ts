@@ -11,18 +11,24 @@ import { afterAll, beforeAll, expect, test } from '@jest/globals'
 import * as openAPIToGraphQL from '../src/index'
 import { Options } from '../src/types'
 import { startServer, stopServer } from './example_api6_server'
+import { readFileSync } from 'fs'
+import { join } from 'path'
 
-const oas = require('./fixtures/example_oas6.json')
 const PORT = 3008
-// Update PORT for this test case:
-oas.servers[0].variables.port.default = String(PORT)
+function getOas() {
+  const oasStr = readFileSync(join(__dirname, './fixtures/example_oas6.json'), 'utf8');
+  const oas = JSON.parse(oasStr);
+  // update PORT for this test case:
+  oas.servers[0].variables.port.default = String(PORT);
+  return oas;
+};
 
 let createdSchema: GraphQLSchema
 
 // Set up the schema first and run example API server
 beforeAll(() => {
   return Promise.all([
-    openAPIToGraphQL.createGraphQLSchema(oas).then(({ schema, report }) => {
+    openAPIToGraphQL.createGraphQLSchema(getOas()).then(({ schema, report }) => {
       createdSchema = schema
     }),
     startServer(PORT)
@@ -77,7 +83,7 @@ test('Option requestOptions should work with links', () => {
   }`
 
   const promise2 = openAPIToGraphQL
-    .createGraphQLSchema(oas, options)
+    .createGraphQLSchema(getOas(), options)
     .then(({ schema }) => {
       const ast = parse(query2)
       const errors = validate(schema, ast)
