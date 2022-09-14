@@ -4,8 +4,7 @@
 // License text available at https://opensource.org/licenses/MIT
 
 // Type imports:
-import crossFetch from 'cross-fetch'
-import FormData from 'form-data'
+import { fetch, FormDataLimits} from '@whatwg-node/fetch';
 import { GraphQLFieldResolver, GraphQLResolveInfo, OperationTypeNode } from 'graphql'
 import { SubscriptionContext } from './graphql'
 
@@ -86,7 +85,7 @@ export type RequestOptions<TSource, TContext, TArgs> = Omit<
  *
  * Based on: https://github.com/form-data/form-data#custom-options
  */
-export type FileUploadOptions = ConstructorParameters<typeof FormData>[0]
+export type FileUploadOptions = FormDataLimits
 
 export type Options<TSource, TContext, TArgs> = Partial<
   InternalOptions<TSource, TContext, TArgs>
@@ -362,5 +361,5 @@ export type InternalOptions<TSource, TContext, TArgs> = {
   /**
    * Custom W3 Compatible `fetch` implementation
    */
-  fetch: typeof crossFetch
+  fetch: typeof fetch
 }

@@ -53,7 +53,7 @@ import * as GraphQLTools from './graphql_tools'
 import { preprocessOas } from './preprocessor'
 import * as Oas3Tools from './oas_3_tools'
 import { sortObject, handleWarning, MitigationTypes } from './utils'
-import crossFetch from 'cross-fetch'
+import {fetch} from '@whatwg-node/fetch'
 import debug from 'debug'
 import { getJSONSchemaOptions } from './getJSONSchemaOptions'
 const translationLog = debug('translation')
@@ -116,7 +116,7 @@ const DEFAULT_OPTIONS: InternalOptions<any, any, any> = {
   provideErrorExtensions: true,
   equivalentToMessages: true,
 
-  fetch: crossFetch
+  fetch
 }
 
 async function optionsTranslator<TSource, TContext, TArgs>(originOptions: Options<TSource, TContext, TArgs>, oas: OpenAPIV3.Document): Promise<OpenAPILoaderOptions> {
@@ -165,26 +165,35 @@ async function optionsTranslator<TSource, TContext, TArgs>(originOptions: Option
    */
 
   // transform headers
+  if (originOptions.requestOptions?.headers) {
+    headersTranslator(originOptions.requestOptions.headers, options)
+  }
   if (originOptions.headers) {
-    if (originOptions.headers instanceof Function) {
-      // Differences between headers function here and over MESH prevents it from being supported currently
-      translationLog('headers as a function is not supported');
-    } else {
-      options.operationHeaders = {};
-      if (Array.isArray(originOptions.headers)) {
-        originOptions.headers.forEach(header => {
-          options.operationHeaders[header[0]] = header[1];
-        });
-      } else if (originOptions.headers instanceof Headers) {
-        originOptions.headers.forEach((value, key) => {
-          options.operationHeaders[key] = value;
-        });
-      } else {
-        options.operationHeaders = originOptions.headers;
-      }
-    }
+    headersTranslator(originOptions.headers, options)
   }
 
+  return options;
+}
+
+function headersTranslator<TSource, TContext, TArgs>(headers: Options<TSource, TContext, TArgs>['headers'], options: OpenAPILoaderOptions): OpenAPILoaderOptions {
+  if (headers instanceof Function) {
+    // NOTE: Differences between headers function here and over MESH prevents it from being supported currently
+    translationLog('headers as a function is not supported');
+  } else {
+    options.operationHeaders ??= {};
+    if (Array.isArray(headers)) {
+      headers.forEach(header => {
+        options.operationHeaders[header[0]] = header[1];
+      });
+    } else if (headers instanceof Headers) {
+      headers.forEach((value, key) => {
+        options.operationHeaders[key] = value;
+      });
+    } else {
+      options.operationHeaders = {...options.operationHeaders, ...headers};
+    }
+  }
+  
   return options;
 }
 

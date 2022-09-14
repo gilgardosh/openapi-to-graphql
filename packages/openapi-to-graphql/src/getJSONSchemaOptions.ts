@@ -186,7 +186,7 @@ export async function getJSONSchemaOptions(
           case 'header': {
             operationConfig.headers = operationConfig.headers || {};
             let defaultValue = '';
-            if (typeof operationHeaders === 'object' && !operationHeaders[paramObj.name]?.includes('{')) {
+            if (typeof operationHeaders === 'object' && operationHeaders[paramObj.name] && !operationHeaders[paramObj.name].includes('{')) {
               defaultValue = `:${operationHeaders[paramObj.name]}`;
             } else if (paramObj.schema?.default) {
               defaultValue = `:${paramObj.schema.default}`;

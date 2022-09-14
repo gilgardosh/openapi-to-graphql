@@ -5,42 +5,61 @@
 
 'use strict'
 
+/// <reference lib="dom" />
+
+import { createServer, YogaNodeServerInstance } from '@graphql-yoga/node'
 import { afterAll, beforeAll, expect, test } from '@jest/globals'
+import { fetch, File, FormData } from '@whatwg-node/fetch';
+import { readFileSync } from 'fs'
+import { graphql, GraphQLObjectType, GraphQLSchema } from 'graphql'
+import { join } from 'path'
+
 import * as openAPIToGraphQL from '../src/index'
 import * as Oas3Tools from '../src/oas_3_tools'
-
-import { Volume } from 'memfs'
-import FormData from 'form-data'
-import { createServer } from 'http'
-import fetch from 'cross-fetch'
-import { graphql, GraphQLObjectType, GraphQLSchema } from 'graphql'
-import { GraphQLOperation, processRequest } from 'graphql-upload'
 import { startServer as startAPIServer, stopServer as stopAPIServer } from './file_upload_api_server'
 
-// Set up the schema first
-const oas = require('./fixtures/file_upload.json')
-
 const PORT = 3010
+const GRAPHQL_PORT = 3011
 
-// Update PORT for this test case:
-oas.servers[0].variables.port.default = String(PORT)
+// Set up the schema first
+function getOas() {
+  const oasStr = readFileSync(join(__dirname, './fixtures/file_upload.json'), 'utf8');
+  const oas = JSON.parse(oasStr);
+  // update PORT for this test case:
+  oas.servers[0].variables.port.default = String(PORT);
+  return oas;
+};
 
 let createdSchema: GraphQLSchema
+type NewType_1 = YogaNodeServerInstance<any, any, any>
+
+type NewType = NewType_1
+
+let yoga: NewType;
 
 beforeAll(async () => {
-  const [{ schema }] = await Promise.all([
-    openAPIToGraphQL.createGraphQLSchema(oas),
+  const {schema} = await openAPIToGraphQL.createGraphQLSchema(getOas())
+  createdSchema = schema
+  
+  yoga = createServer({
+    schema: createdSchema,
+    port: GRAPHQL_PORT,
+    maskedErrors: false,
+    logging: false,
+  });
+
+  await Promise.all([
+    yoga.start(),
     startAPIServer(PORT)
   ])
-
-  createdSchema = schema
 })
 
 afterAll(async () => {
-  await stopAPIServer()
+  await Promise.all([stopAPIServer(), yoga.stop()]);
 })
 
 test('All mutation endpoints are found to be present', () => {
+  const oas = getOas();
   let oasMutCount = 0
   for (let path in oas.paths) {
     for (let method in oas.paths[path]) {
@@ -51,9 +70,9 @@ test('All mutation endpoints are found to be present', () => {
   expect(gqlTypes).toEqual(oasMutCount)
 })
 
-test('Registers the graphql-upload Upload scalar type', async () => {
+test('Registers the File scalar type', async () => {
   const query = `{
-    __type(name: "Upload") {
+    __type(name: "File") {
       name
       kind
     }
@@ -63,7 +82,7 @@ test('Registers the graphql-upload Upload scalar type', async () => {
   expect(result).toEqual({
     data: {
       __type: {
-        name: 'Upload',
+        name: 'File',
         kind: 'SCALAR'
       }
     }
@@ -103,7 +122,7 @@ test('Introspection for mutations returns a mutation matching the custom field s
               name: 'fileUploadTest',
               args: expect.arrayContaining([
                 expect.objectContaining({
-                  name: 'uploadInput'
+                  name: 'input'
                 })
               ])
             })
@@ -116,63 +135,43 @@ test('Introspection for mutations returns a mutation matching the custom field s
 
 test('Upload completes without any error', async () => {
   // Setup GraphQL for integration test
-  const graphqlServer = createServer(async (req, res) => {
-    try {
-      const operation = await processRequest(req, res) as GraphQLOperation
-      const result = await graphql({schema: createdSchema, source: operation.query, rootValue: null, contextValue: null, variableValues: operation.variables as {
-        readonly [variable: string]: unknown;
-    } | undefined})
-      res.end(JSON.stringify(result))
-    } catch (e) {
-      console.log(e)
-    }
-  })
+  const graphqlServer = createServer({
+    schema: createdSchema,
+    port: 9864,
+    maskedErrors: false,
+    logging: false,
+  });
 
-  const { port: graphqlServerPort, close: closeGraphQLServer } = await new Promise<{port: any, close: any}>((resolve, reject) => {
-    graphqlServer.listen(function (err) {
-      if (err) {
-        return reject(err)
-      }
-
-      return resolve({
-        port: this.address().port,
-        close: () => this.close()
-      })
-    })
-  })
-
-  const vol = new Volume()
-
-  // Create mocked in memory file for upload
-  vol.fromJSON({
-    './README.md': '1'
-  }, '/app')
+  await graphqlServer.start();
 
   // Prepare request to match GraphQL multipart request spec
   // Reference: https://github.com/jaydenseric/graphql-multipart-request-spec
-  const form = new FormData()
-  const query = `
-    mutation FileUploadTest($file: Upload!) {
-      fileUploadTest(uploadInput: { file: $file }) {
-        id
-        url
+  const form = new FormData();
+  const query = /* GraphQL */ `
+    mutation FileUploadTest($file: File!) {
+      fileUploadTest(input: { file: $file }) {
+        name
+        content
       }
     }
-  `
-  form.append('operations', JSON.stringify({ query, variables: { file: null } }))
-  form.append('map', JSON.stringify({ 0: ['variables.file'] }))
-  form.append('0', vol.createReadStream('/app/README.md'), {
-    filename: 'readme.md',
-    filepath: '/app'
-  })
+  `;
+  form.append('operations', JSON.stringify({ query, variables: { file: null } }));
+  form.append('map', JSON.stringify({ 0: ['variables.file'] }));
+  form.append('0', new File(['Hello World!'], 'hello.txt', { type: 'text/plain' }));
 
   // @ts-ignore
-  const uploadResult = await fetch(`http://localhost:${graphqlServerPort}`, { method: 'POST', body: form })
-      .then(res => res.json())
+  const response = await fetch(`http://127.0.0.1:${GRAPHQL_PORT}/graphql`, { method: 'POST', body: form });
+  const uploadResult: any = await response.json();
 
-  expect(uploadResult.errors).not.toBeDefined()
-  expect(uploadResult.data).toBeDefined()
-  expect(uploadResult.data.fileUploadTest).toBeDefined()
+  expect(uploadResult).toEqual({
+    data: {
+      fileUploadTest: {
+        name: 'hello.txt',
+        content: 'Hello World!',
+      },
+    },
+  });
 
-  closeGraphQLServer()
-})
+  await graphqlServer.stop();
+});
+
