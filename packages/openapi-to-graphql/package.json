@@ -101,13 +101,13 @@
     "pluralize": "^8.0.0",
     "swagger2openapi": "^7.0.8",
     "tslib": "^2.4.0",
-    "url-join": "4.0.1",
-    "ws": "^7.5.3"
+    "url-join": "4.0.1"
   },
   "peerDependencies": {
     "graphql": "^14.0.0 || ^15.0.0"
   },
   "devDependencies": {
+    "@graphql-yoga/node": "2.13.13",
     "@types/deep-equal": "^1.0.1",
     "@types/graphql": "^14.0.3",
     "@types/graphql-upload": "^8.0.11",

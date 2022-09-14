@@ -6,15 +6,15 @@
 'use strict'
 
 const express = require('express')
-const aedes = require('aedes')
 const net = require('net')
 const bodyParser = require('body-parser')
+const { PubSub } = require('@graphql-mesh/utils');
 
 const app = express()
 
 let httpServer
-let mqttBroker
-let tcpServer
+
+const pubsub = new PubSub();
 
 const Devices = {
   'Audio-player': {
@@ -30,24 +30,8 @@ const Devices = {
 /**
  * Starts the server at the given port
  */
-function startServers(HTTP_PORT, MQTT_PORT) {
-  mqttBroker = aedes({
-    published: (packet, client, cb) => {
-      if (packet.topic.startsWith('$SYS')) {
-        return cb()
-      }
-      console.log(
-        `MQTT packet published on ${packet.topic} by ${
-          client ? client.id : 'broker'
-        }`
-      )
-      cb()
-    }
-  })
-
-  tcpServer = net.createServer(mqttBroker.handle)
-
-  app.use(bodyParser.json())
+function startServers(HTTP_PORT) {
+  app.use(express.json())
 
   app.get('/api/user', (req, res) => {
     res.send({
@@ -63,13 +47,7 @@ function startServers(HTTP_PORT, MQTT_PORT) {
     if (req.body.userName && req.body.name) {
       const device = req.body
       Devices[device.name] = device
-      const packet = {
-        topic: `/api/${device.userName}/devices/${req.method.toUpperCase()}/${
-          device.name
-        }`,
-        payload: Buffer.from(JSON.stringify(device))
-      }
-      mqttBroker.publish(packet)
+      pubsub.publish(`webhook:post:/api/${device.userName}/devices/${req.method.toUpperCase()}`, device);
       res.status(200).send(device)
     } else {
       res.status(404).send({
@@ -94,13 +72,7 @@ function startServers(HTTP_PORT, MQTT_PORT) {
         const device = req.body
         delete Devices[req.params.deviceName]
         Devices[device.deviceName] = device
-        const packet = {
-          topic: `/api/${device.userName}/devices/${req.method.toUpperCase()}/${
-            device.name
-          }`,
-          payload: Buffer.from(JSON.stringify(device))
-        }
-        mqttBroker.publish(packet)
+        pubsub.publish(`webhook:post:/api/${device.userName}/devices/${req.method.toUpperCase()}`, device);
         res.status(200).send(device)
       } else {
         res.status(404).send({
@@ -136,10 +108,8 @@ function startServers(HTTP_PORT, MQTT_PORT) {
 
   return Promise.all([
     (httpServer = app.listen(HTTP_PORT)),
-    tcpServer.listen(MQTT_PORT)
   ]).then(() => {
     console.log(`Example HTTP API accessible on port ${HTTP_PORT}`)
-    console.log(`Example MQTT API accessible on port ${MQTT_PORT}`)
   })
 }
 
@@ -148,21 +118,19 @@ function startServers(HTTP_PORT, MQTT_PORT) {
  */
 function stopServers() {
   return Promise.all([
-    httpServer.close(),
-    tcpServer.close(),
-    mqttBroker.close()
+    httpServer.close()
   ]).then(() => {
     console.log(`Stopped HTTP API server`)
-    console.log(`Stopped MQTT API server`)
   })
 }
 
 // If run from command line, start server:
 if (require.main === module) {
-  startServers(3008, 1885)
+  startServers(3008)
 }
 
 module.exports = {
   startServers,
-  stopServers
+  stopServers,
+  pubsub
 }

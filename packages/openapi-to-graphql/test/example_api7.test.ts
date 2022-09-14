@@ -5,87 +5,45 @@
 
 'use strict'
 
-import { graphql, parse, validate, execute, subscribe, GraphQLSchema } from 'graphql'
+import { createServer, YogaNodeServerInstance } from '@graphql-yoga/node';
 import { afterAll, beforeAll, expect, test } from '@jest/globals'
-
-import { createServer } from 'http'
-import {
-  SubscriptionServer,
-  SubscriptionClient
-} from 'subscriptions-transport-ws'
-import { MQTTPubSub } from 'graphql-mqtt-subscriptions'
-import { connect } from 'mqtt'
-import ws from 'ws'
+import { readFileSync } from 'fs'
+import { join } from 'path'
 
 import * as openAPIToGraphQL from '../src/index'
-import { startServers, stopServers } from './example_api7_server'
-
-const oas = require('./fixtures/example_oas7.json')
+import { startServers, stopServers, pubsub } from './example_api7_server'
 
 const TEST_PORT = 3009
 const HTTP_PORT = 3008
-const MQTT_PORT = 1885
 
-oas.servers[0].variables.port.default = String(HTTP_PORT)
-oas.servers[1].variables.port.default = String(MQTT_PORT)
+function getOas() {
+  const oasStr = readFileSync(join(__dirname, './fixtures/example_oas7.json'), 'utf8');
+  const oas = JSON.parse(oasStr);
+  // update PORT for this test case:
+  oas.servers[0].variables.port.default = String(HTTP_PORT)
+  return oas;
+};
 
-let createdSchema: GraphQLSchema
-let wsServer
-let mqttClient
-let subscriptionServer
+let subscriptionServer: YogaNodeServerInstance<any, any, any>;
 
 // Set up the schema first and run example API servers
-beforeAll(() => {
-  return Promise.all([
-    openAPIToGraphQL
-      .createGraphQLSchema(oas, {
-        fillEmptyResponses: true,
-        createSubscriptionsFromCallbacks: true
-      })
-      .then(({ schema }) => {
-        createdSchema = schema
+beforeAll(async () => {
+  const {schema} = await openAPIToGraphQL
+    .createGraphQLSchema(getOas(), {
+      fillEmptyResponses: true,
+      // createSubscriptionsFromCallbacks: true
+    })
 
-        mqttClient = connect(`mqtt://localhost:${MQTT_PORT}`, {
-          keepalive: 60,
-          reschedulePings: true,
-          protocolId: 'MQTT',
-          protocolVersion: 4,
-          reconnectPeriod: 2000,
-          connectTimeout: 5 * 1000,
-          clean: true
-        })
-
-        const pubsub = new MQTTPubSub({
-          client: mqttClient
-        })
-
-        wsServer = createServer((req, res) => {
-          res.writeHead(404)
-          res.end()
-        })
-
-        wsServer.listen(TEST_PORT)
-
-        subscriptionServer = new SubscriptionServer(
-          {
-            execute,
-            subscribe,
-            schema,
-            onConnect: (params, socket, context) => {
-              // Add pubsub to subscribe context
-              return { pubsub }
-            }
-          },
-          {
-            server: wsServer,
-            path: '/subscriptions'
-          }
-        )
-      })
-      .catch((e) => {
-        console.log('error', e)
-      }),
-    startServers(HTTP_PORT, MQTT_PORT)
+  subscriptionServer = createServer({
+    schema,
+    port: TEST_PORT,
+    context: { pubsub },
+    maskedErrors: false,
+    logging: false,
+  });
+  
+  await Promise.all([subscriptionServer.start(),
+    startServers(HTTP_PORT)
   ])
 })
 
@@ -102,87 +60,90 @@ afterAll(async () => {
    * The timeout allows these to close properly but is there a better way?
    */
   await sleep(500)
-  Promise.all([
-    subscriptionServer.close(),
-    wsServer.close(),
-    mqttClient.end(),
+  await Promise.all([
+    subscriptionServer.stop(),
     stopServers()
   ])
-  await sleep(500)
 })
 
-test('Receive data from the subscription after creating a new instance', () => {
+test('Receive data from the subscription after creating a new instance', async () => {
   const userName = 'Carlos'
   const deviceName = 'Bot'
 
-  const query = `subscription watchDevice($topicInput: TopicInput!) {
-    devicesEventListener(topicInput: $topicInput) {
+  const query = `subscription watchDevice($method: String!, $userName: String!) {
+    devicesEventListener(method: $method, userName: $userName) {
       name
-      userName
       status
     }
   }`
 
-  const query2 = `mutation($deviceInput: DeviceInput!) {
-    createDevice(deviceInput: $deviceInput) {
-      name
-      userName
-      status
+  const query2 = `mutation triggerEvent($deviceInput: Device_Input!) {
+    createDevice(input: $deviceInput) {
+      ... on Device {
+        name
+        userName
+        status
+      }
     }
   }`
 
-  return new Promise<void>((resolve, reject) => {
-    const client = new SubscriptionClient(
-      `ws://localhost:${TEST_PORT}/subscriptions`, {}, ws
-    )
+  const baseUrl = `http://127.0.0.1:${TEST_PORT}/graphql`;
+  const url = new URL(baseUrl);
 
-    client.onError((e) => reject(e))
+  url.searchParams.append('query', query);
+  url.searchParams.append(
+    'variables',
+    JSON.stringify({
+      method: 'POST',
+      userName,
+    })
+  );
 
-    client
-      .request({
-        query,
-        operationName: 'watchDevice',
+  setTimeout(async () => {
+    const response = await fetch(baseUrl, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        query: query2,
         variables: {
-          topicInput: {
-            method: 'POST',
-            userName: `${userName}`
-          }
-        }
-      })
-      .subscribe({
-        next: (result) => {
-          if (result.errors) {
-            reject(result.errors)
-          }
-
-          if (result.data) {
-            expect(result.data).toEqual({
-              devicesEventListener: {
-                name: `${deviceName}`,
-                userName: `${userName}`,
-                status: false
-              }
-            })
-            resolve()
-          }
+          deviceInput: {
+            name: `${deviceName}`,
+            userName: `${userName}`,
+            status: false,
+          },
         },
-        error: (e) => reject(e)
-      })
+      }),
+    });
+    const result = await response.json();
+    expect(result.errors).toBeFalsy();
+  }, 300);
 
-    setTimeout(() => {
-      graphql({schema: createdSchema, source: query2, rootValue: null, contextValue: null, variableValues: {
-        deviceInput: {
-          name: `${deviceName}`,
-          userName: `${userName}`,
-          status: false
-        }
-      }})
-        .then((res) => {
-          if (!res.data) {
-            reject(new Error('Failed mutation'))
-          }
-        })
-        .catch(reject)
-    }, 500)
-  })
+  const abortCtrl = new AbortController();
+
+  const response = await fetch(url.toString(), {
+    method: 'GET',
+    headers: {
+      Accept: 'text/event-stream',
+    },
+    signal: abortCtrl.signal,
+  });
+
+  for await (const chunk of response.body) {
+    const data = Buffer.from(chunk).toString('utf-8');
+    expect(data.trim()).toBe(
+      `data: ${JSON.stringify({
+        data: {
+          devicesEventListener: {
+            name: deviceName,
+            status: false,
+          },
+        },
+      })}`
+    );
+    break;
+  }
+
+  abortCtrl.abort();
 })
