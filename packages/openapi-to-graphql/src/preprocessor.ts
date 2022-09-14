@@ -935,9 +935,7 @@ function createDataDef<TSource, TContext, TArgs>(
       // No target GraphQL type
       handleWarning({
         mitigationType: MitigationTypes.UNKNOWN_TARGET_TYPE,
-        message: `No GraphQL target type could be identified for schema '${JSON.stringify(
-          schema
-        )}'.`,
+        message: `No GraphQL target type could be identified for schema.`,
         data,
         log: preprocessingLog
       })
