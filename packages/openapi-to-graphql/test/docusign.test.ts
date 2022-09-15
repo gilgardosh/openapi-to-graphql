@@ -5,20 +5,25 @@
 
 'use strict'
 
-import { graphql } from 'graphql'
-import { afterAll, beforeAll, expect, test } from '@jest/globals'
+import { expect, test } from '@jest/globals'
+import { readFileSync } from 'fs'
+import { join } from 'path'
 
 import * as openAPIToGraphQL from '../src/index'
-import { Options } from '../src/types/options'
+import { Options } from '../src/types'
 
-const oas = require('./fixtures/docusign.json')
+function getOas() {
+  const oasStr = readFileSync(join(__dirname, './fixtures/docusign.json'), 'utf8');
+  const oas = JSON.parse(oasStr);
+  return oas;
+}
 
 test('Generate schema without problems', () => {
   const options: Options<any, any, any> = {
     strict: false
   }
   return openAPIToGraphQL
-    .createGraphQLSchema(oas, options)
+    .createGraphQLSchema(getOas(), options)
     .then(({ schema }) => {
       expect(schema).toBeTruthy()
     })

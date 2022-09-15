@@ -8,16 +8,7 @@
  * operation in the OAS.
  */
 
-import {
-  Oas3,
-  LinkObject,
-  OperationObject,
-  ParameterObject,
-  ServerObject,
-  SchemaObject
-} from './oas3'
-
-import { GraphQLOperationType } from './graphql'
+import type { OpenAPIV3 } from 'openapi-types';
 
 import {
   GraphQLScalarType,
@@ -25,7 +16,8 @@ import {
   GraphQLInputObjectType,
   GraphQLList,
   GraphQLEnumType,
-  GraphQLUnionType
+  GraphQLUnionType,
+  OperationTypeNode
 } from 'graphql'
 
 import { HTTP_METHODS } from '../oas_3_tools'
@@ -59,7 +51,7 @@ export type DataDefinition = {
   preferredName: string
 
   // The schema of the data type, why may have gone through some resolution, and is used with preferredName to identify a specific GraphQL type
-  schema: SchemaObject
+  schema: OpenAPIV3.SchemaObject
 
   /**
    * Similar to the required property in object schemas but because of certain
@@ -72,7 +64,7 @@ export type DataDefinition = {
   targetGraphQLType: TargetGraphQLType
 
   // Collapsed link objects from all operations returning the same response data
-  links: { [key: string]: LinkObject }
+  links: { [key: string]: OpenAPIV3.LinkObject }
 
   /**
    * Data definitions of subschemas in the schema
@@ -115,7 +107,7 @@ export type Operation = {
   /**
    * The raw operation object from the OAS
    */
-  operation: OperationObject
+  operation: OpenAPIV3.OperationObject
 
   /**
    * Identifier of the operation - may be created by concatenating method & path
@@ -181,7 +173,7 @@ export type Operation = {
   /**
    * List of parameters of the operation
    */
-  parameters: ParameterObject[]
+  parameters: OpenAPIV3.ParameterObject[]
 
   /**
    * List of keys of security schemes required by this operation
@@ -194,7 +186,7 @@ export type Operation = {
   /**
    * (Local) server definitions of the operation.
    */
-  servers: ServerObject[]
+  servers: OpenAPIV3.ServerObject[]
 
   /**
    * Whether this operation should be placed in an authentication viewer
@@ -206,7 +198,7 @@ export type Operation = {
    * Type of root operation type, i.e. whether the generated field should be
    * added to the Query, Mutation, or Subscription root operation
    */
-  operationType: GraphQLOperationType
+  operationType: OperationTypeNode
 
   /**
    * The success HTTP code, 200-299, destined to become a GraphQL object type
@@ -216,5 +208,5 @@ export type Operation = {
   /**
    * The OAS which this operation originated from
    */
-  oas: Oas3
+  oas: OpenAPIV3.Document
 }

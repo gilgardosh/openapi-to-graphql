@@ -6,8 +6,12 @@
 'use strict'
 
 const express = require('express')
+const multer = require('multer')
 
 let server // holds server object for shutdown
+
+const storage = multer.memoryStorage();
+const upload = multer({ storage });
 
 /**
  * Starts the server at the given port
@@ -18,10 +22,10 @@ function startServer (PORT) {
   const bodyParser = require('body-parser')
   app.use(bodyParser.json())
 
-  app.post('/api/upload', (req, res) => {
+  app.post('/api/upload', upload.any(), (req, res) => {
     res.json({
-      id: '1234567098',
-      url: 'https://some-random-url.domain/assets/upload-file.ext'
+      name: req.files?.[0]?.originalname,
+      content: req.files?.[0]?.buffer.toString('utf8'),
     })
   })
 

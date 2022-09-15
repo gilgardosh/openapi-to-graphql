@@ -21,7 +21,7 @@
   "paths": {
     "/upload": {
       "post": {
-        "x-graphql-field-name": "fileUploadTest",
+        "operationId": "fileUploadTest",
         "requestBody": {
           "content": {
             "multipart/form-data": {
@@ -32,8 +32,6 @@
                 "type": "object",
                 "properties": {
                   "file": {
-                    "maxLength": 255,
-                    "pattern": "^[0-9a-zA-Z_./ -]*$",
                     "type": "string",
                     "format": "binary"
                   }
@@ -48,18 +46,12 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "required": [
-                    "id",
-                    "url"
-                  ],
                   "type": "object",
                   "properties": {
-                    "id": {
-                      "type": "integer",
-                      "format": "int64",
-                      "example": 10
+                    "name": {
+                      "type": "string"
                     },
-                    "url": {
+                    "content": {
                       "type": "string"
                     }
                   }

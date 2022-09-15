@@ -5,24 +5,34 @@
 
 'use strict'
 
-import { graphql, GraphQLSchema, parse, validate } from 'graphql'
-import { afterAll, beforeAll, expect, test } from '@jest/globals'
+import { beforeAll, expect, test } from '@jest/globals'
+import { readFileSync } from 'fs'
+import { GraphQLSchema, parse, validate } from 'graphql'
+import { join } from 'path'
 
 import * as openAPIToGraphQL from '../src/index'
 
-const oas = require('./fixtures/cloudfunction.json')
+function getOas() {
+  const oasStr = readFileSync(join(__dirname, './fixtures/cloudfunction.json'), 'utf8');
+  const oas = JSON.parse(oasStr);
+  return oas;
+}
 
 let createdSchema: GraphQLSchema
 
 beforeAll(async () => {
-  const { schema } = await openAPIToGraphQL.createGraphQLSchema(oas)
+  const { schema } = await openAPIToGraphQL.createGraphQLSchema(getOas(), {
+    headers: {
+      authorization: 'Basic {args.usernameAndPassword|base64}',
+    }
+  })
   createdSchema = schema
 })
 
 test('Get response', async () => {
   const query = `mutation {
-    mutationViewerBasicAuth (username: "test" password: "data") {
-      postTestAction2 (payloadInput: {age: 27}) {
+    post_test_action_2 (input: {age: 27}, usernameAndPassword: "test:data") {
+      ... on Response {
         payload
         age
       }

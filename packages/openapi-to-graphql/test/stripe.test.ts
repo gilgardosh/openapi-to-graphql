@@ -5,24 +5,31 @@
 
 'use strict'
 
-import { afterAll, beforeAll, expect, test } from '@jest/globals'
+import { beforeAll, expect, test } from '@jest/globals'
+import { readFileSync } from 'fs'
 import { GraphQLObjectType, GraphQLSchema } from 'graphql'
+import { join } from 'path'
 
 import * as openAPIToGraphQL from '../src/index'
 
 // Set up the schema first
-const oas = require('./fixtures/stripe.json')
+function getOas() {
+  const oasStr = readFileSync(join(__dirname, './fixtures/stripe.json'), 'utf8');
+  const oas = JSON.parse(oasStr);
+  return oas;
+};
 
 let createdSchema: GraphQLSchema
 beforeAll(() => {
   return openAPIToGraphQL
-    .createGraphQLSchema(oas)
-    .then(({ schema, report }) => {
+    .createGraphQLSchema(getOas())
+    .then(({ schema }) => {
       createdSchema = schema
     })
 })
 
 test('All Stripe query endpoints present', () => {
+  const oas = getOas();
   let oasGetCount = 0
   for (let path in oas.paths) {
     for (let method in oas.paths[path]) {
@@ -30,7 +37,7 @@ test('All Stripe query endpoints present', () => {
     }
   }
   const gqlTypes = Object.keys(
-    ((createdSchema.getTypeMap().Query as GraphQLObjectType).getFields().viewerAnyAuth.type as GraphQLObjectType).getFields()
+    (createdSchema.getTypeMap().Query as GraphQLObjectType).getFields()
   ).length
 
   expect(gqlTypes).toEqual(oasGetCount)

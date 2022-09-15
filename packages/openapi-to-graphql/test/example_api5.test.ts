@@ -5,18 +5,24 @@
 
 'use strict'
 
-import { graphql, GraphQLSchema } from 'graphql'
 import { afterAll, beforeAll, expect, test } from '@jest/globals'
+import { readFileSync } from 'fs'
+import { graphql, GraphQLSchema } from 'graphql'
+import { join } from 'path'
 
 import * as openAPIToGraphQL from '../src/index'
 import { startServer, stopServer } from './example_api5_server'
 
-const oas = require('./fixtures/example_oas5.json')
 const PORT = 3007
-// Update PORT for this test case:
-oas.servers[0].variables.port.default = String(PORT)
+function getOas() {
+  const oasStr = readFileSync(join(__dirname, './fixtures/example_oas5.json'), 'utf8');
+  const oas = JSON.parse(oasStr);
+  // update PORT for this test case:
+  oas.servers[0].variables.port.default = String(PORT);
+  return oas;
+};
 
-// Testing the simpleNames option
+// Testing the new naming convention
 
 let createdSchema: GraphQLSchema
 
@@ -24,7 +30,7 @@ let createdSchema: GraphQLSchema
 beforeAll(() => {
   return Promise.all([
     openAPIToGraphQL
-      .createGraphQLSchema(oas, {
+      .createGraphQLSchema(getOas(), {
         simpleNames: true
       })
       .then(({ schema, report }) => {
@@ -40,17 +46,16 @@ afterAll(() => {
 })
 
 /**
- * Because of the simpleNames option, 'o_d_d___n_a_m_e' will not be turned into
- * 'oDDNAME'.
+ * Because of the naming convention, 'o_d_d___n_a_m_e' will be left as-is.
  */
-test('Basic simpleNames option test', () => {
+test('Naming convention test', () => {
   const query = `{
     o_d_d___n_a_m_e {
       data
     }
   }`
 
-  return graphql(createdSchema, query).then((result) => {
+  return graphql({schema: createdSchema, source: query}).then((result) => {
     expect(result).toEqual({
       data: {
         o_d_d___n_a_m_e: {
@@ -64,20 +69,20 @@ test('Basic simpleNames option test', () => {
 /**
  * 'w-e-i-r-d___n-a-m-e' contains GraphQL unsafe characters.
  *
- * Because of the simpleNames option, 'w-e-i-r-d___n-a-m-e' will be turned into
- * 'weird___name' and not 'wEIRDNAME'.
+ * Because of the naming convention, 'w-e-i-r-d___n-a-m-e' will be turned into
+ * 'w_e_i_r_d___n_a_m_e'.
  */
-test('Basic simpleNames option test with GraphQL unsafe values', () => {
+test('Naming convention test with GraphQL unsafe values', () => {
   const query = `{
-    weird___name {
+    w_e_i_r_d___n_a_m_e {
       data
     }
   }`
 
-  return graphql(createdSchema, query).then((result) => {
+  return graphql({schema: createdSchema, source: query}).then((result) => {
     expect(result).toEqual({
       data: {
-        weird___name: {
+        w_e_i_r_d___n_a_m_e: {
           data: 'weird name'
         }
       }
@@ -88,20 +93,20 @@ test('Basic simpleNames option test with GraphQL unsafe values', () => {
 /**
  * 'w-e-i-r-d___n-a-m-e2' contains GraphQL unsafe characters.
  *
- * Because of the simpleNames option, 'w-e-i-r-d___n-a-m-e2' will be turned into
- * 'weird___name2' and not 'wEIRDNAME2'.
+ * Because of the naming convention, 'w-e-i-r-d___n-a-m-e2' will be turned into
+ * 'w_e_i_r_d___n_a_m_e2_by_f_u_n_k_y___p_a_r_a_m_e_t_e_r'.
  */
-test('Basic simpleNames option test with GraphQL unsafe values and a parameter', () => {
+test('Naming convention test with GraphQL unsafe values and a parameter', () => {
   const query = `{
-    weird___name2 (funky___parameter: "Arnold") {
+    w_e_i_r_d___n_a_m_e2_by_f_u_n_k_y___p_a_r_a_m_e_t_e_r (f_u_n_k_y___p_a_r_a_m_e_t_e_r: "Arnold") {
       data
     }
   }`
 
-  return graphql(createdSchema, query).then((result) => {
+  return graphql({schema: createdSchema, source: query}).then((result) => {
     expect(result).toEqual({
       data: {
-        weird___name2: {
+        w_e_i_r_d___n_a_m_e2_by_f_u_n_k_y___p_a_r_a_m_e_t_e_r: {
           data: 'weird name 2 param: Arnold'
         }
       }
@@ -110,23 +115,23 @@ test('Basic simpleNames option test with GraphQL unsafe values and a parameter',
 })
 
 /**
- * Because of the simpleNames option, 'w-e-i-r-d___n-a-m-e___l-i-n-k' will be
- * turned into 'weird___name___link' and not 'wEIRDNAMELINK'.
+ * Because of the naming convention, 'w-e-i-r-d___n-a-m-e___l-i-n-k' will be
+ * turned into 'w_e_i_r_d___n_a_m_e___l_i_n_k'.
  */
-test('Basic simpleNames option test with a link', () => {
+test('Naming convention test with a link', () => {
   const query = `{
     o_d_d___n_a_m_e {
-      weird___name___link {
+      w_e_i_r_d___n_a_m_e___l_i_n_k {
         data
       }
     }
   }`
 
-  return graphql(createdSchema, query).then((result) => {
+  return graphql({schema: createdSchema, source: query}).then((result) => {
     expect(result).toEqual({
       data: {
         o_d_d___n_a_m_e: {
-          weird___name___link: {
+          w_e_i_r_d___n_a_m_e___l_i_n_k: {
             data: 'weird name'
           }
         }
@@ -136,23 +141,23 @@ test('Basic simpleNames option test with a link', () => {
 })
 
 /**
- * Because of the simpleNames option, 'w-e-i-r-d___n-a-m-e2___l-i-n-k' will be
- * turned into 'weird___name2___link' and not 'wEIRDNAME2LINK'.
+ * Because of the naming convention, 'w-e-i-r-d___n-a-m-e2___l-i-n-k' will be
+ * turned into 'w_e_i_r_d___n_a_m_e2___l_i_n_k'.
  */
-test('Basic simpleNames option test with a link that has parameters', () => {
+test('Naming convention test with a link that has parameters', () => {
   const query = `{
     o_d_d___n_a_m_e {
-      weird___name2___link {
+      w_e_i_r_d___n_a_m_e2___l_i_n_k {
         data
       }
     }
   }`
 
-  return graphql(createdSchema, query).then((result) => {
+  return graphql({schema: createdSchema, source: query}).then((result) => {
     expect(result).toEqual({
       data: {
         o_d_d___n_a_m_e: {
-          weird___name2___link: {
+          w_e_i_r_d___n_a_m_e2___l_i_n_k: {
             data: 'weird name 2 param: Charles'
           }
         }
@@ -162,23 +167,23 @@ test('Basic simpleNames option test with a link that has parameters', () => {
 })
 
 /**
- * Because of the simpleNames option, 'w-e-i-r-d___n-a-m-e3___l-i-n-k' will be
- * turned into 'weird___name3___link3' and not 'wEIRDNAME3LINK'.
+ * Because of the naming convention, 'w-e-i-r-d___n-a-m-e3___l-i-n-k' will be
+ * turned into 'w_e_i_r_d___n_a_m_e3___l_i_n_k'.
  */
-test('Basic simpleNames option test with a link that has exposed parameters', () => {
+test('Naming convention test with a link that has exposed parameters', () => {
   const query = `{
     o_d_d___n_a_m_e {
-      weird___name3___link (funky___parameter: "Brittany") {
+      w_e_i_r_d___n_a_m_e3___l_i_n_k (f_u_n_k_y___p_a_r_a_m_e_t_e_r: "Brittany") {
         data
       }
     }
   }`
 
-  return graphql(createdSchema, query).then((result) => {
+  return graphql({schema: createdSchema, source: query}).then((result) => {
     expect(result).toEqual({
       data: {
         o_d_d___n_a_m_e: {
-          weird___name3___link: {
+          w_e_i_r_d___n_a_m_e3___l_i_n_k: {
             data: 'weird name 3 param: Brittany'
           }
         }
@@ -188,9 +193,8 @@ test('Basic simpleNames option test with a link that has exposed parameters', ()
 })
 
 /**
- * Because of the simpleEnumValues option, 'a-m-b-e-r' will be sanitized to
- * ALL_CAPS 'A_M_B_E_R' when it is not used and sanitized to 'amber' (only
- * removing GraphQL illegal characters) when it is used
+ * 'a-m-b-e-r' will be sanitized to 'a_m_b_e_r' (Replacing GraphQL illegal
+ * characters with underscores).
  */
 test('Basic simpleEnumValues option test', () => {
   const query = `{
@@ -199,39 +203,21 @@ test('Basic simpleEnumValues option test', () => {
     }
   }`
 
-  const promise = graphql(createdSchema, query).then((result) => {
+  return graphql({schema: createdSchema, source: query}).then((result) => {
     expect(result).toEqual({
       data: {
         getEnum: {
-          data: 'A_M_B_E_R'
+          data: 'a_m_b_e_r'
         }
       }
     })
   })
-
-  const promise2 = openAPIToGraphQL
-    .createGraphQLSchema(oas, {
-      simpleEnumValues: true
-    })
-    .then(({ schema, report }) => {
-      return graphql(schema, query).then((result) => {
-        expect(result).toEqual({
-          data: {
-            getEnum: {
-              data: 'amber'
-            }
-          }
-        })
-      })
-    })
-
-  return Promise.all([promise, promise2])
 })
 
 /**
- * Regardless of simpleEnumValues, a GraphQL name cannot begin with a number,
- * therefore 3 will be sanitized to '_3'
- */
+   * A GraphQL name cannot begin with a number, therefore 3 will be sanitized
+   * to '_3'
+   */
 test('Basic simpleEnumValues option test on numerical enum', () => {
   const query = `{
     getNumericalEnum {
@@ -239,7 +225,7 @@ test('Basic simpleEnumValues option test on numerical enum', () => {
     }
   }`
 
-  const promise = graphql(createdSchema, query).then((result) => {
+  return graphql({schema: createdSchema, source: query}).then((result) => {
     expect(result).toEqual({
       data: {
         getNumericalEnum: {
@@ -248,65 +234,27 @@ test('Basic simpleEnumValues option test on numerical enum', () => {
       }
     })
   })
-
-  const promise2 = openAPIToGraphQL
-    .createGraphQLSchema(oas, {
-      simpleEnumValues: true
-    })
-    .then(({ schema, report }) => {
-      return graphql(schema, query).then((result) => {
-        expect(result).toEqual({
-          data: {
-            getNumericalEnum: {
-              data: '_3'
-            }
-          }
-        })
-      })
-    })
-
-  return Promise.all([promise, promise2])
 })
 
-/**
- * Regardless of simpleEnumValues, OtG will translate an object enum to an
- * arbitrary JSON type
- */
+  /**
+   * Will translate an object enum to an arbitrary JSON type
+   */
 test('Basic simpleEnumValues option test on object enum', () => {
   const query = `{
-    __type(name: "GetObjectEnum") {
+    __type(name: "getObjectEnum_200_response") {
       name
       kind
     } 
   }`
 
-  const promise = graphql(createdSchema, query).then((result) => {
+  return graphql({schema: createdSchema, source: query}).then((result) => {
     expect(result).toEqual({
       data: {
         __type: {
-          name: 'GetObjectEnum',
+          name: 'getObjectEnum_200_response',
           kind: 'OBJECT'
         }
       }
     })
   })
-
-  const promise2 = openAPIToGraphQL
-    .createGraphQLSchema(oas, {
-      simpleEnumValues: true
-    })
-    .then(({ schema, report }) => {
-      return graphql(schema, query).then((result) => {
-        expect(result).toEqual({
-          data: {
-            __type: {
-              name: 'GetObjectEnum',
-              kind: 'OBJECT'
-            }
-          }
-        })
-      })
-    })
-
-  return Promise.all([promise, promise2])
 })
