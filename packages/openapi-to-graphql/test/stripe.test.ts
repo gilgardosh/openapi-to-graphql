@@ -23,7 +23,7 @@ let createdSchema: GraphQLSchema
 beforeAll(() => {
   return openAPIToGraphQL
     .createGraphQLSchema(getOas())
-    .then(({ schema, report }) => {
+    .then(({ schema }) => {
       createdSchema = schema
     })
 })
@@ -37,7 +37,7 @@ test('All Stripe query endpoints present', () => {
     }
   }
   const gqlTypes = Object.keys(
-    ((createdSchema.getTypeMap().Query as GraphQLObjectType).getFields().viewerAnyAuth.type as GraphQLObjectType).getFields()
+    (createdSchema.getTypeMap().Query as GraphQLObjectType).getFields()
   ).length
 
   expect(gqlTypes).toEqual(oasGetCount)

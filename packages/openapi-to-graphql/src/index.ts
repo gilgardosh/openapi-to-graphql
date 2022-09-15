@@ -119,7 +119,7 @@ const DEFAULT_OPTIONS: InternalOptions<any, any, any> = {
   fetch
 }
 
-async function optionsTranslator<TSource, TContext, TArgs>(originOptions: Options<TSource, TContext, TArgs>, oas: OpenAPIV3.Document): Promise<OpenAPILoaderOptions> {
+async function optionsTranslator<TSource, TContext, TArgs>(originOptions: Options<TSource, TContext, TArgs>, oas: OpenAPIV3.Document | OpenAPIV2.Document): Promise<OpenAPILoaderOptions> {
   /**
    * Ignored openapi-to-graphql options:
    * - strict: boolean
@@ -212,20 +212,16 @@ export async function createGraphQLSchema<TSource, TContext, TArgs>(
     ...DEFAULT_OPTIONS,
     ...options
   }
-  // Convert non-OAS 3 into OAS 3
-  const oas = await Oas3Tools.getValidOAS3(
-    spec,
-    internalOptions.oasValidatorOptions,
-    internalOptions.swagger2OpenAPIOptions
-  )
+
+  const copiedSpec = JSON.parse(JSON.stringify(spec))
 
   // Setting default options
   const meshOptions = await optionsTranslator({
     ...DEFAULT_OPTIONS,
     ...options
-  }, oas);
+  }, spec);
 
-  const name = oas.info.title;
+  const name = spec.info.title;
 
   const extraJSONSchemaOptions = await getJSONSchemaOptions(meshOptions);
   
@@ -233,6 +229,13 @@ export async function createGraphQLSchema<TSource, TContext, TArgs>(
     ...meshOptions,
     ...extraJSONSchemaOptions,
   });
+  
+  // Convert non-OAS 3 into OAS 3, only needed for the following logic
+  const oas = await Oas3Tools.getValidOAS3(
+    copiedSpec,
+    internalOptions.oasValidatorOptions,
+    internalOptions.swagger2OpenAPIOptions
+  )
 
   // TODO: replace this
   return translateOpenAPIToGraphQL([oas], internalOptions, schema)

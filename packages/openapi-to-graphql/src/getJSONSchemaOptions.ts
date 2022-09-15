@@ -17,7 +17,7 @@ import { OasTitlePathMethodObject } from './types';
 import { Logger } from '@graphql-mesh/types';
 
 interface GetJSONSchemaOptionsFromOpenAPIOptionsParams {
-  source: OpenAPIV3.Document;
+  source: OpenAPIV2.Document | OpenAPIV3.Document;
   cwd?: string;
   fetch?: WindowOrWorkerGlobalScope['fetch'];
   baseUrl?: string;
@@ -45,7 +45,7 @@ export async function getJSONSchemaOptions(
   const localSelectQueryOrMutationField = selectQueryOrMutationField[schemaName] || {};
   
   logger?.debug(`Fetching OpenAPI Document from ${source}`);
-  let oasOrSwagger: OpenAPIV3.Document = source;
+  let oasOrSwagger: OpenAPIV2.Document | OpenAPIV3.Document = source;
 
   function handleDefinitions(definitions: Record<string, OpenAPIV2.SchemaObject | OpenAPIV3.SchemaObject>) {
     const seen = new Map<
