@@ -31,11 +31,7 @@ function getOas() {
 };
 
 let createdSchema: GraphQLSchema
-type NewType_1 = YogaNodeServerInstance<any, any, any>
-
-type NewType = NewType_1
-
-let yoga: NewType;
+let yoga: YogaNodeServerInstance<any, any, any>;
 
 beforeAll(async () => {
   const {schema} = await openAPIToGraphQL.createGraphQLSchema(getOas())
@@ -159,8 +155,7 @@ test('Upload completes without any error', async () => {
   form.append('map', JSON.stringify({ 0: ['variables.file'] }));
   form.append('0', new File(['Hello World!'], 'hello.txt', { type: 'text/plain' }));
 
-  // @ts-ignore
-  const response = await fetch(`http://127.0.0.1:${GRAPHQL_PORT}/graphql`, { method: 'POST', body: form });
+  const response = await fetch(`http://127.0.0.1:9864/graphql`, { method: 'POST', body: form });
   const uploadResult: any = await response.json();
 
   expect(uploadResult).toEqual({
