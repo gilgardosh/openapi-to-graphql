@@ -6,17 +6,23 @@
 'use strict'
 
 import 'json-bigint-patch';
-import { graphql, GraphQLInputObjectTypeConfig, GraphQLObjectTypeConfig, GraphQLSchema, OperationTypeNode, parse, validate } from 'graphql'
 import { afterAll, beforeAll, expect, test } from '@jest/globals'
+import { readFileSync } from 'fs';
+import { graphql, GraphQLInputObjectTypeConfig, GraphQLObjectTypeConfig, OperationTypeNode, parse, validate } from 'graphql'
+import { join } from 'path';
 
 import * as openAPIToGraphQL from '../src/index'
 import { Options } from '../src/types'
 import { startServer, stopServer } from './example_api_server'
 
-const oas = require('./fixtures/example_oas.json')
 const PORT = 3002
-// Update PORT for this test case:
-oas.servers[0].variables.port.default = String(PORT)
+function getOas() {
+  const oasStr = readFileSync(join(__dirname, './fixtures/example_oas.json'), 'utf8');
+  const oas = JSON.parse(oasStr);
+  // update PORT for this test case:
+  oas.servers[0].variables.port.default = String(PORT);
+  return oas;
+}
 
 let createdSchema;
 
@@ -24,7 +30,7 @@ let createdSchema;
 beforeAll(() => {
   return Promise.all([
     openAPIToGraphQL
-      .createGraphQLSchema(oas, {
+      .createGraphQLSchema(getOas(), {
         fillEmptyResponses: true
       })
       .then(({ schema, report }) => {
@@ -72,7 +78,8 @@ test('Get descriptions', () => {
               description: null
             },
             {
-              description: 'The rating of the car.'
+              // NOTE: Since this object wraps an ENUM, the description ('The rating of the car.') is available in the inner-type
+              description: null
             }
           ]
         }
@@ -431,7 +438,7 @@ test('Link parameters as constants and variables', () => {
           },
           everythingLink: {
             body:
-              'http://localhost:3002/api/scanner_GET_200_hello_application/json_close'
+              'http://localhost:3002/api/scanner_GET_200_hello_application/json_keep-alive'
           }
         }
       }
@@ -493,10 +500,10 @@ test('Nested links with constants and variables', () => {
               body: '123',
               everythingLink: {
                 body:
-                  'http://localhost:3002/api/copier_GET_200_123_application/json_close',
+                  'http://localhost:3002/api/copier_GET_200_123_application/json_keep-alive',
                 everythingLink: {
                   body:
-                    'http://localhost:3002/api/copier_GET_200_http://localhost:3002/api/copier_GET_200_123_application/json_close_application/json_close'
+                    'http://localhost:3002/api/copier_GET_200_http://localhost:3002/api/copier_GET_200_123_application/json_keep-alive_application/json_keep-alive'
                 }
               }
             }
@@ -506,7 +513,7 @@ test('Nested links with constants and variables', () => {
           },
           everythingLink: {
             body:
-              'http://localhost:3002/api/scanner_GET_200_val_application/json_close'
+              'http://localhost:3002/api/scanner_GET_200_val_application/json_keep-alive'
           }
         }
       }
@@ -531,7 +538,7 @@ test('Link parameters as constants and variables with request payload', () => {
           body: 'req.body: body, req.query.query: query, req.path.path: path',
           everythingLink2: {
             body:
-              'http://localhost:3002/api/scanner/path_POST_200_body_query_path_application/json_req.body: body, req.query.query: query, req.path.path: path_query_path_close'
+              'http://localhost:3002/api/scanner/path_POST_200_body_query_path_application/json_req.body: body, req.query.query: query, req.path.path: path_query_path_keep-alive'
           }
         }
       }
@@ -970,7 +977,7 @@ test('Define header and query options', () => {
     get_Status (globalquery: "test")
   }`
   return openAPIToGraphQL
-    .createGraphQLSchema(oas, options)
+    .createGraphQLSchema(getOas(), options)
     .then(({ schema }) => {
       // validate that 'limit' parameter is covered by options:
       const ast = parse(query)
@@ -1239,141 +1246,142 @@ test('Error contains extension', () => {
   })
 })
 
-test('Option provideErrorExtensions should prevent error extensions from being created', () => {
-  const options: Options<any, any, any> = {
-    provideErrorExtensions: false
-  }
+// NOTE: provideErrorExtensions is not supported by new translator
+// test('Option provideErrorExtensions should prevent error extensions from being created', () => {
+//   const options: Options<any, any, any> = {
+//     provideErrorExtensions: false
+//   }
 
-  const query = `query {
-    getUserByUsername(username: "abcdef") {
-      name
-    }
-  }`
+//   const query = `query {
+//     getUserByUsername(username: "abcdef") {
+//       name
+//     }
+//   }`
 
-  return openAPIToGraphQL
-    .createGraphQLSchema(oas, options)
-    .then(({ schema }) => {
-      const ast = parse(query)
-      const errors = validate(schema, ast)
-      expect(errors).toEqual([])
-      return graphql({ schema, source: query}).then((result) => {
-        expect(result).toEqual({
-          errors: [
-            {
-              message: 'Could not invoke operation GET /users/{username}',
-              locations: [
-                {
-                  line: 2,
-                  column: 5
-                }
-              ],
-              path: ['user']
-            }
-          ],
-          data: {
-            user: null
-          }
-        })
-      })
-    })
-})
-
-test('Option customResolver', () => {
-  const options: Options<any, any, any> = {
-    customResolvers: {
-      'Example API': {
-        '/users/{username}': {
-          get: () => {
-            return {
-              name: 'Jenifer Aldric'
-            }
-          }
-        }
-      }
-    }
-  }
-
-  const query = `query {
-    getUserByUsername(username: "abcdef") {
-      name
-    }
-  }`
-
-  return openAPIToGraphQL
-    .createGraphQLSchema(oas, options)
-    .then(({ schema }) => {
-      const ast = parse(query)
-      const errors = validate(schema, ast)
-      expect(errors).toEqual([])
-      return graphql({ schema, source: query}).then((result) => {
-        expect(result).toEqual({
-          data: {
-            getUserByUsername: {
-              name: 'Jenifer Aldric'
-            }
-          }
-        })
-      })
-    })
-})
-
-test('Option customResolver with links', () => {
-  const options: Options<any, any, any> = {
-    customResolvers: {
-      'Example API': {
-        '/users/{username}': {
-          get: () => {
-            return {
-              name: 'Jenifer Aldric',
-              employerId: 'binsol'
-            }
-          }
-        }
-      }
-    }
-  }
-
-  const query = `query {
-    getUserByUsername(username: "abcdef") {
-      name
-      employerId
-      employerCompany {
-        name
-        ceoUsername
-        ceoUser {
-          name
-        }
-      }
-    }
-  }`
-
-  return openAPIToGraphQL
-    .createGraphQLSchema(oas, options)
-    .then(({ schema }) => {
-      const ast = parse(query)
-      const errors = validate(schema, ast)
-      expect(errors).toEqual([])
-      return graphql({ schema, source: query}).then((result) => {
-        expect(result).toEqual({
-          data: {
-            getUserByUsername: {
-              name: 'Jenifer Aldric',
-              employerId: 'binsol',
-              employerCompany: {
-                name: 'Binary Solutions',
-                ceoUsername: 'johnny',
-                ceoUser: {
-                  name: 'Jenifer Aldric'
-                }
-              }
-            }
-          }
-        })
-      })
-    })
-})
+//   return openAPIToGraphQL
+//     .createGraphQLSchema(getOas(), options)
+//     .then(({ schema }) => {
+//       const ast = parse(query)
+//       const errors = validate(schema, ast)
+//       expect(errors).toEqual([])
+//       return graphql({ schema, source: query}).then((result) => {
+//         expect(result).toEqual({
+//           errors: [
+//             {
+//               message: 'Could not invoke operation GET /users/{username}',
+//               locations: [
+//                 {
+//                   line: 2,
+//                   column: 5
+//                 }
+//               ],
+//               path: ['user']
+//             }
+//           ],
+//           data: {
+//             getUserByUsername: null
+//           }
+//         })
+//       })
+//     })
+// })
 
 // NOTE: should be replaces with resolver composition
+// test('Option customResolver', () => {
+//   const options: Options<any, any, any> = {
+//     customResolvers: {
+//       'Example API': {
+//         '/users/{username}': {
+//           get: () => {
+//             return {
+//               name: 'Jenifer Aldric'
+//             }
+//           }
+//         }
+//       }
+//     }
+//   }
+
+//   const query = `query {
+//     getUserByUsername(username: "abcdef") {
+//       name
+//     }
+//   }`
+
+//   return openAPIToGraphQL
+//     .createGraphQLSchema(getOas(), options)
+//     .then(({ schema }) => {
+//       const ast = parse(query)
+//       const errors = validate(schema, ast)
+//       expect(errors).toEqual([])
+//       return graphql({ schema, source: query}).then((result) => {
+//         expect(result).toEqual({
+//           data: {
+//             getUserByUsername: {
+//               name: 'Jenifer Aldric'
+//             }
+//           }
+//         })
+//       })
+//     })
+// })
+
+// test('Option customResolver with links', () => {
+//   const options: Options<any, any, any> = {
+//     customResolvers: {
+//       'Example API': {
+//         '/users/{username}': {
+//           get: () => {
+//             return {
+//               name: 'Jenifer Aldric',
+//               employerId: 'binsol'
+//             }
+//           }
+//         }
+//       }
+//     }
+//   }
+
+//   const query = `query {
+//     getUserByUsername(username: "abcdef") {
+//       name
+//       employerId
+//       employerCompany {
+//         name
+//         ceoUsername
+//         ceoUser {
+//           name
+//         }
+//       }
+//     }
+//   }`
+
+//   return openAPIToGraphQL
+//     .createGraphQLSchema(getOas(), options)
+//     .then(({ schema }) => {
+//       const ast = parse(query)
+//       const errors = validate(schema, ast)
+//       expect(errors).toEqual([])
+//       return graphql({ schema, source: query}).then((result) => {
+//         expect(result).toEqual({
+//           data: {
+//             getUserByUsername: {
+//               name: 'Jenifer Aldric',
+//               employerId: 'binsol',
+//               employerCompany: {
+//                 name: 'Binary Solutions',
+//                 ceoUsername: 'johnny',
+//                 ceoUser: {
+//                   name: 'Jenifer Aldric'
+//                 }
+//               }
+//             }
+//           }
+//         })
+//       })
+//     })
+// })
+
 // test('Option customResolver using resolver arguments', () => {
 //   const options: Options<any, any, any> = {
 //     customResolvers: {
@@ -1396,7 +1404,7 @@ test('Option customResolver with links', () => {
 //   }`
 
 //   return openAPIToGraphQL
-//     .createGraphQLSchema(oas, options)
+//     .createGraphQLSchema(getOas(), options)
 //     .then(({ schema }) => {
 //       const ast = parse(query)
 //       const errors = validate(schema, ast)
@@ -1437,7 +1445,7 @@ test('Option customResolver with links', () => {
 //   }`
 
 //   return openAPIToGraphQL
-//     .createGraphQLSchema(oas, options)
+//     .createGraphQLSchema(getOas(), options)
 //     .then(({ schema }) => {
 //       const ast = parse(query)
 //       const errors = validate(schema, ast)
@@ -1476,7 +1484,7 @@ test('Option customResolver with links', () => {
 //   }`
 
 //   return openAPIToGraphQL
-//     .createGraphQLSchema(oas, options)
+//     .createGraphQLSchema(getOas(), options)
 //     .then(({ schema }) => {
 //       const ast = parse(query)
 //       const errors = validate(schema, ast)
@@ -1732,7 +1740,7 @@ test('Operation returning arbitrary JSON type should not include _openAPIToGraph
 //   }`
 
 //   const promise = openAPIToGraphQL
-//     .createGraphQLSchema(oas, options)
+//     .createGraphQLSchema(getOas(), options)
 //     .then(({ schema }) => {
 //       const ast = parse(query)
 //       const errors = validate(schema, ast)
@@ -1827,7 +1835,7 @@ test('Withhold "Equivalent to..." messages', () => {
   }`
 
   const promise = openAPIToGraphQL
-    .createGraphQLSchema(oas, options)
+    .createGraphQLSchema(getOas(), options)
     .then(({ schema }) => {
       const ast = parse(query)
       const errors = validate(schema, ast)
@@ -1860,7 +1868,7 @@ test('Withhold "Equivalent to..." messages', () => {
   }`
 
   const promise2 = openAPIToGraphQL
-    .createGraphQLSchema(oas, options)
+    .createGraphQLSchema(getOas(), options)
     .then(({ schema }) => {
       const ast = parse(query)
       const errors = validate(schema, ast)
@@ -1936,7 +1944,7 @@ test('UUID format becomes GraphQL ID type', () => {
 //   }`
 
 //   return openAPIToGraphQL
-//     .createGraphQLSchema(oas, options)
+//     .createGraphQLSchema(getOas(), options)
 //     .then(({ schema }) => {
 //       const ast = parse(query)
 //       const errors = validate(schema, ast)
@@ -2021,7 +2029,7 @@ test('Option selectQueryOrMutationField', () => {
 
   // The users (now named getUserByUsername) field should exist as a Mutation field
   const promise2 = openAPIToGraphQL
-    .createGraphQLSchema(oas, options)
+    .createGraphQLSchema(getOas(), options)
     .then(({ schema }) => {
       const ast = parse(query)
       const errors = validate(schema, ast)
@@ -2072,7 +2080,7 @@ test('Option selectQueryOrMutationField', () => {
 //   }`
 
 //   return openAPIToGraphQL
-//     .createGraphQLSchema(oas, options)
+//     .createGraphQLSchema(getOas(), options)
 //     .then(({ schema }) => {
 //       const ast = parse(query)
 //       const errors = validate(schema, ast)
@@ -2116,7 +2124,7 @@ test('Option selectQueryOrMutationField', () => {
 //   }`
 
 //   return openAPIToGraphQL
-//     .createGraphQLSchema(oas, options)
+//     .createGraphQLSchema(getOas(), options)
 //     .then(({ schema }) => {
 //       const ast = parse(query)
 //       const errors = validate(schema, ast)
@@ -2158,7 +2166,7 @@ test('Option selectQueryOrMutationField', () => {
 //   }`
 
 //   return openAPIToGraphQL
-//     .createGraphQLSchema(oas, options)
+//     .createGraphQLSchema(getOas(), options)
 //     .then(({ schema }) => {
 //       const ast = parse(query)
 //       const errors = validate(schema, ast)
@@ -2221,7 +2229,7 @@ test('Option selectQueryOrMutationField', () => {
 //   }`
 
 //   const promise2 = openAPIToGraphQL
-//     .createGraphQLSchema(oas, options)
+//     .createGraphQLSchema(getOas(), options)
 //     .then(({ schema }) => {
 //       const ast = parse(query2)
 //       const errors = validate(schema, ast)
@@ -2269,7 +2277,7 @@ test('Option selectQueryOrMutationField', () => {
 //   }`
 
 //   return openAPIToGraphQL
-//     .createGraphQLSchema(oas, options)
+//     .createGraphQLSchema(getOas(), options)
 //     .then(({ schema }) => {
 //       const ast = parse(query)
 //       const errors = validate(schema, ast)
@@ -2304,7 +2312,7 @@ test('Option selectQueryOrMutationField', () => {
 //   }`
 
 //   return openAPIToGraphQL
-//     .createGraphQLSchema(oas, options)
+//     .createGraphQLSchema(getOas(), options)
 //     .then(({ schema }) => {
 //       const ast = parse(query)
 //       const errors = validate(schema, ast)
@@ -2364,7 +2372,7 @@ test('Non-nullable properties for object types', () => {
 
 //   // The postUser field should now have a requestPody argument
 //   const promise2 = openAPIToGraphQL
-//     .createGraphQLSchema(oas, options)
+//     .createGraphQLSchema(getOas(), options)
 //     .then(({ schema }) => {
 //       const ast = parse(query)
 //       const errors = validate(schema, ast)
@@ -2405,7 +2413,7 @@ test('Non-nullable properties from nested allOf', () => {
     }
   }`
 
-  return openAPIToGraphQL.createGraphQLSchema(oas).then(({ schema }) => {
+  return openAPIToGraphQL.createGraphQLSchema(getOas()).then(({ schema }) => {
     const ast = parse(query)
     const errors = validate(schema, ast)
     expect(errors).toEqual([])
